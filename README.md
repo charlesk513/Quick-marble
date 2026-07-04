@@ -2,11 +2,11 @@
 <p align="center">
   <img src="quick_marble/assets/images/logo.jpg" width="160" alt="Quick Marble & Granite logo" />
 </p>
+
 # Quick Marble & Granite Management System
 ## Software Requirements Specification & Architecture (v1.0)
 
 **Tagline:** "A Service On Your Time"
-**Brand colors:** Black background, Rasta accent palette — Red `#C8102E`, Gold `#FFC72C`, Green `#2E7D32`
 
 ---
 
