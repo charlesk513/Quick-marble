@@ -77,6 +77,29 @@ class AppUser {
     return assignedOfficeId == officeId;
   }
 
+  AppUser copyWith({
+    String? name,
+    String? email,
+    String? phone,
+    UserRole? role,
+    String? assignedOfficeId,
+    bool? clearAssignedOfficeId,
+    bool? isActive,
+  }) {
+    return AppUser(
+      uid: uid,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      role: role ?? this.role,
+      assignedOfficeId: (clearAssignedOfficeId ?? false)
+          ? null
+          : (assignedOfficeId ?? this.assignedOfficeId),
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt,
+    );
+  }
+
   factory AppUser.fromMap(String uid, Map<String, dynamic> map) {
     return AppUser(
       uid: uid,
