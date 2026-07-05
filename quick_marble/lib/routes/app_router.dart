@@ -10,6 +10,11 @@ import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/settings/settings_home_screen.dart';
 import '../screens/settings/offices_screen.dart';
 import '../screens/settings/users_screen.dart';
+import '../screens/clients/clients_screen.dart';
+import '../screens/quotations/quotations_screen.dart';
+import '../screens/contracts/contracts_screen.dart';
+import '../screens/activity/activity_screen.dart';
+import '../screens/reports/reports_screen.dart';
 
 /// Route paths centralized here to avoid magic strings scattered across
 /// the app.
@@ -21,8 +26,11 @@ class AppRoutes {
   static const settings = '/settings';
   static const settingsOffices = '/settings/offices';
   static const settingsUsers = '/settings/users';
-  // Clients, quotations, contracts, reports routes are added as each of
-  // those modules is built.
+  static const clients = '/clients';
+  static const quotations = '/quotations';
+  static const contracts = '/contracts';
+  static const activity = '/activity';
+  static const reports = '/reports';
 }
 
 /// Bridges a Riverpod stream to something GoRouter's `refreshListenable`
@@ -92,6 +100,26 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.settingsUsers,
         builder: (context, state) => const UsersScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.clients,
+        builder: (context, state) => const ClientsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.quotations,
+        builder: (context, state) => const QuotationsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.contracts,
+        builder: (context, state) => const ContractsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.activity,
+        builder: (context, state) => const ActivityScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.reports,
+        builder: (context, state) => const ReportsScreen(),
       ),
     ],
   );
