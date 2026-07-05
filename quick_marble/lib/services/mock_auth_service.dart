@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import '../models/app_user.dart';
 import 'auth_service.dart';
 
@@ -60,7 +61,10 @@ class MockAuthService implements AuthService {
   AppUser? get currentUser => _current;
 
   @override
-  Stream<AppUser?> authStateChanges() => _controller.stream;
+  Stream<AppUser?> authStateChanges() async* {
+    yield _current;
+    yield* _controller.stream;
+  }
 
   @override
   Future<AppUser> signIn(
