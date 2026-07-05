@@ -37,7 +37,8 @@ class QuotationItem {
 
   double get subtotal => quantity * unitPrice;
 
-  QuotationItem copyWith({String? description, double? quantity, double? unitPrice}) {
+  QuotationItem copyWith(
+      {String? description, double? quantity, double? unitPrice}) {
     return QuotationItem(
       description: description ?? this.description,
       quantity: quantity ?? this.quantity,
@@ -90,6 +91,9 @@ class Quotation {
   double get total => subtotal + vat;
 
   Quotation copyWith({
+    String? officeId,
+    String? clientId,
+    String? clientName,
     List<QuotationItem>? items,
     QuotationStatus? status,
     String? notes,
@@ -98,9 +102,9 @@ class Quotation {
     return Quotation(
       id: id,
       number: number,
-      officeId: officeId,
-      clientId: clientId,
-      clientName: clientName,
+      officeId: officeId ?? this.officeId,
+      clientId: clientId ?? this.clientId,
+      clientName: clientName ?? this.clientName,
       items: items ?? this.items,
       status: status ?? this.status,
       notes: notes ?? this.notes,
