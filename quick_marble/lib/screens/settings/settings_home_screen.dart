@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../routes/app_router.dart';
 
 /// Entry point for admin-only management screens. Only reachable via a
@@ -29,7 +30,7 @@ class SettingsHomeScreen extends StatelessWidget {
             onTap: () => context.push(AppRoutes.settingsUsers),
           ),
           const SizedBox(height: 12),
-          _SettingsTile(
+          const _SettingsTile(
             icon: Icons.business_outlined,
             title: 'Company Profile',
             subtitle: 'Coming soon',
@@ -63,8 +64,11 @@ class _SettingsTile extends StatelessWidget {
         leading: CircleAvatar(
           backgroundColor: disabled
               ? Colors.grey[300]
-              : Theme.of(context).colorScheme.primary.withOpacity(0.15),
-          child: Icon(icon, color: disabled ? Colors.grey[600] : Theme.of(context).colorScheme.primary),
+              : Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+          child: Icon(icon,
+              color: disabled
+                  ? Colors.grey[600]
+                  : Theme.of(context).colorScheme.primary),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(subtitle),

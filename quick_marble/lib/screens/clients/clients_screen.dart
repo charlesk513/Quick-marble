@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../models/client.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/client_provider.dart';
@@ -19,7 +20,8 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
   @override
   Widget build(BuildContext context) {
     final clients = ref.watch(visibleClientsProvider).where((client) {
-      final text = '${client.name} ${client.phone} ${client.address}'.toLowerCase();
+      final text =
+          '${client.name} ${client.phone} ${client.address}'.toLowerCase();
       return text.contains(_query.toLowerCase());
     }).toList();
 
@@ -47,14 +49,16 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                 ? const EmptyState(
                     icon: Icons.people_outline,
                     title: 'No clients yet',
-                    message: 'Add clients for each office before creating quotations.',
+                    message:
+                        'Add clients for each office before creating quotations.',
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
                     itemCount: clients.length,
                     itemBuilder: (context, index) => _ClientCard(
                       client: clients[index],
-                      onEdit: () => _showClientSheet(context, client: clients[index]),
+                      onEdit: () =>
+                          _showClientSheet(context, client: clients[index]),
                     ),
                   ),
           ),
@@ -72,7 +76,9 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     final email = TextEditingController(text: client?.email ?? '');
     final address = TextEditingController(text: client?.address ?? '');
     final notes = TextEditingController(text: client?.notes ?? '');
-    String officeId = client?.officeId ?? user?.assignedOfficeId ?? (offices.isNotEmpty ? offices.first.id : 'nansana');
+    String officeId = client?.officeId ??
+        user?.assignedOfficeId ??
+        (offices.isNotEmpty ? offices.first.id : 'nansana');
 
     await showModalBottomSheet<void>(
       context: context,
@@ -92,32 +98,57 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(client == null ? 'New Client' : 'Edit Client', style: Theme.of(context).textTheme.titleLarge),
+                  Text(client == null ? 'New Client' : 'Edit Client',
+                      style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 16),
                   if (user?.isAdministrator == true)
                     DropdownButtonFormField<String>(
-                      value: officeId,
+                      initialValue: officeId,
                       decoration: const InputDecoration(labelText: 'Office'),
-                      items: offices.map((office) => DropdownMenuItem(value: office.id, child: Text(office.name))).toList(),
-                      onChanged: (value) => setModalState(() => officeId = value ?? officeId),
+                      items: offices
+                          .map((office) => DropdownMenuItem(
+                              value: office.id, child: Text(office.name)))
+                          .toList(),
+                      onChanged: (value) =>
+                          setModalState(() => officeId = value ?? officeId),
                     ),
                   const SizedBox(height: 12),
-                  TextFormField(controller: name, decoration: const InputDecoration(labelText: 'Client name'), validator: _required),
+                  TextFormField(
+                      controller: name,
+                      decoration:
+                          const InputDecoration(labelText: 'Client name'),
+                      validator: _required),
                   const SizedBox(height: 12),
-                  TextFormField(controller: phone, decoration: const InputDecoration(labelText: 'Phone'), keyboardType: TextInputType.phone, validator: _required),
+                  TextFormField(
+                      controller: phone,
+                      decoration: const InputDecoration(labelText: 'Phone'),
+                      keyboardType: TextInputType.phone,
+                      validator: _required),
                   const SizedBox(height: 12),
-                  TextFormField(controller: email, decoration: const InputDecoration(labelText: 'Email optional'), keyboardType: TextInputType.emailAddress),
+                  TextFormField(
+                      controller: email,
+                      decoration:
+                          const InputDecoration(labelText: 'Email optional'),
+                      keyboardType: TextInputType.emailAddress),
                   const SizedBox(height: 12),
-                  TextFormField(controller: address, decoration: const InputDecoration(labelText: 'Address / Location'), validator: _required),
+                  TextFormField(
+                      controller: address,
+                      decoration: const InputDecoration(
+                          labelText: 'Address / Location'),
+                      validator: _required),
                   const SizedBox(height: 12),
-                  TextFormField(controller: notes, decoration: const InputDecoration(labelText: 'Notes'), maxLines: 3),
+                  TextFormField(
+                      controller: notes,
+                      decoration: const InputDecoration(labelText: 'Notes'),
+                      maxLines: 3),
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () async {
                         if (!formKey.currentState!.validate()) return;
-                        final controller = ref.read(clientControllerProvider.notifier);
+                        final controller =
+                            ref.read(clientControllerProvider.notifier);
                         if (client == null) {
                           await controller.createClient(
                             officeId: officeId,
@@ -139,7 +170,8 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                         }
                         if (context.mounted) Navigator.of(context).pop();
                       },
-                      child: Text(client == null ? 'Save Client' : 'Update Client'),
+                      child: Text(
+                          client == null ? 'Save Client' : 'Update Client'),
                     ),
                   ),
                 ],
@@ -151,7 +183,8 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     );
   }
 
-  String? _required(String? value) => value == null || value.trim().isEmpty ? 'Required' : null;
+  String? _required(String? value) =>
+      value == null || value.trim().isEmpty ? 'Required' : null;
 }
 
 class _ClientCard extends ConsumerWidget {
@@ -165,11 +198,17 @@ class _ClientCard extends ConsumerWidget {
     final canEdit = user?.canEditOffice(client.officeId) ?? false;
     return Card(
       child: ListTile(
-        leading: CircleAvatar(child: Text(client.name.isNotEmpty ? client.name[0].toUpperCase() : '?')),
-        title: Text(client.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+        leading: CircleAvatar(
+            child: Text(
+                client.name.isNotEmpty ? client.name[0].toUpperCase() : '?')),
+        title: Text(client.name,
+            style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text('${client.phone}\n${client.address}', maxLines: 2),
         isThreeLine: true,
-        trailing: canEdit ? IconButton(icon: const Icon(Icons.edit_outlined), onPressed: onEdit) : null,
+        trailing: canEdit
+            ? IconButton(
+                icon: const Icon(Icons.edit_outlined), onPressed: onEdit)
+            : null,
       ),
     );
   }

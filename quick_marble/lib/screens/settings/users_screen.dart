@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -61,33 +62,39 @@ class UsersScreen extends ConsumerWidget {
 
               return Card(
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   leading: CircleAvatar(
                     backgroundColor: user.isActive
-                        ? AppColors.green.withOpacity(0.15)
+                        ? AppColors.green.withValues(alpha: 0.15)
                         : Colors.grey[300],
                     child: Text(
                       user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: user.isActive ? AppColors.green : Colors.grey[600],
+                        color:
+                            user.isActive ? AppColors.green : Colors.grey[600],
                       ),
                     ),
                   ),
-                  title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text('${user.role.label} · $officeName\n${user.email}'),
+                  title: Text(user.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle:
+                      Text('${user.role.label} · $officeName\n${user.email}'),
                   isThreeLine: true,
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Switch(
                         value: user.isActive,
-                        activeColor: AppColors.green,
-                        onChanged: (value) => _toggleActive(context, ref, user, value),
+                        activeThumbColor: AppColors.green,
+                        onChanged: (value) =>
+                            _toggleActive(context, ref, user, value),
                       ),
                       IconButton(
                         icon: const Icon(Icons.edit_outlined),
-                        onPressed: () => _showUserForm(context, ref, user: user),
+                        onPressed: () =>
+                            _showUserForm(context, ref, user: user),
                       ),
                     ],
                   ),
@@ -118,7 +125,9 @@ class UsersScreen extends ConsumerWidget {
       if (!confirmed) return;
     }
     try {
-      await ref.read(userControllerProvider.notifier).setUserActive(user.uid, newValue);
+      await ref
+          .read(userControllerProvider.notifier)
+          .setUserActive(user.uid, newValue);
     } on UserException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -291,16 +300,19 @@ class _UserFormSheetState extends ConsumerState<_UserFormSheet> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Full Name'),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Name is required' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _emailController,
-                enabled: !_isEditing, // email is the login identifier; keep it immutable here
+                enabled:
+                    !_isEditing, // email is the login identifier; keep it immutable here
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
                   labelText: 'Email',
-                  helperText: _isEditing ? 'Email cannot be changed here' : null,
+                  helperText:
+                      _isEditing ? 'Email cannot be changed here' : null,
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Email is required';
@@ -313,14 +325,17 @@ class _UserFormSheetState extends ConsumerState<_UserFormSheet> {
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(labelText: 'Phone Number'),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Phone is required' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Phone is required'
+                    : null,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<UserRole>(
-                value: _role,
+                initialValue: _role,
                 decoration: const InputDecoration(labelText: 'Role'),
                 items: UserRole.values
-                    .map((r) => DropdownMenuItem(value: r, child: Text(r.label)))
+                    .map(
+                        (r) => DropdownMenuItem(value: r, child: Text(r.label)))
                     .toList(),
                 onChanged: (value) {
                   if (value == null) return;
@@ -333,10 +348,13 @@ class _UserFormSheetState extends ConsumerState<_UserFormSheet> {
               if (_role != UserRole.administrator) ...[
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: offices.any((o) => o.id == _officeId) ? _officeId : null,
-                  decoration: const InputDecoration(labelText: 'Assigned Office'),
+                  initialValue:
+                      offices.any((o) => o.id == _officeId) ? _officeId : null,
+                  decoration:
+                      const InputDecoration(labelText: 'Assigned Office'),
                   items: offices
-                      .map((o) => DropdownMenuItem(value: o.id, child: Text(o.name)))
+                      .map((o) =>
+                          DropdownMenuItem(value: o.id, child: Text(o.name)))
                       .toList(),
                   onChanged: (value) => setState(() => _officeId = value),
                   validator: (v) => v == null ? 'Select an office' : null,
@@ -349,7 +367,8 @@ class _UserFormSheetState extends ConsumerState<_UserFormSheet> {
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
                       )
                     : Text(_isEditing ? 'Save Changes' : 'Add User'),
               ),
