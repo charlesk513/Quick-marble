@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/quotation.dart';
 import '../providers/auth_provider.dart';
 import '../services/mock_quotation_service.dart';
@@ -40,6 +41,17 @@ class QuotationController extends StateNotifier<AsyncValue<void>> {
         items: items,
         notes: notes,
       );
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  Future<void> updateQuotation(Quotation quotation) async {
+    state = const AsyncValue.loading();
+    try {
+      await _service.updateQuotation(quotation);
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
