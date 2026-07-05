@@ -13,6 +13,20 @@ class Office {
     required this.createdAt,
   });
 
+  Office copyWith({
+    String? name,
+    String? location,
+    bool? isActive,
+  }) {
+    return Office(
+      id: id,
+      name: name ?? this.name,
+      location: location ?? this.location,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt,
+    );
+  }
+
   factory Office.fromMap(String id, Map<String, dynamic> map) {
     return Office(
       id: id,

@@ -164,7 +164,7 @@ Full schema, indexes, and security rule design live in the project's architectur
 ## Development Roadmap
 
 - [x] **Module 1 — Foundation:** project scaffold, theming, routing, auth wiring, role/office guards
-- [ ] **Module 2 — Offices & Users:** admin management screens
+- [x] **Module 2 — Offices & Users:** admin management screens (add/edit/enable-disable offices, add/edit/deactivate users with role + office assignment)
 - [ ] **Module 3 — Clients:** full CRUD, search, filtering
 - [ ] **Module 4 — Quotations:** builder, numbering, PDF, approval workflow
 - [ ] **Module 5 — Contracts:** creation from quotation, document upload
