@@ -41,16 +41,19 @@ class OfficesScreen extends ConsumerWidget {
               final office = sorted[index];
               return Card(
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  title: Text(office.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  title: Text(office.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: Text(office.location),
                   leading: CircleAvatar(
                     backgroundColor: office.isActive
-                        ? AppColors.green.withOpacity(0.15)
+                        ? AppColors.green.withValues(alpha: 0.15)
                         : Colors.grey[300],
                     child: Icon(
                       Icons.store_mall_directory_outlined,
-                      color: office.isActive ? AppColors.green : Colors.grey[600],
+                      color:
+                          office.isActive ? AppColors.green : Colors.grey[600],
                     ),
                   ),
                   trailing: Row(
@@ -58,12 +61,14 @@ class OfficesScreen extends ConsumerWidget {
                     children: [
                       Switch(
                         value: office.isActive,
-                        activeColor: AppColors.green,
-                        onChanged: (value) => _toggleActive(context, ref, office, value),
+                        activeThumbColor: AppColors.green,
+                        onChanged: (value) =>
+                            _toggleActive(context, ref, office, value),
                       ),
                       IconButton(
                         icon: const Icon(Icons.edit_outlined),
-                        onPressed: () => _showOfficeForm(context, ref, office: office),
+                        onPressed: () =>
+                            _showOfficeForm(context, ref, office: office),
                       ),
                     ],
                   ),
@@ -94,7 +99,9 @@ class OfficesScreen extends ConsumerWidget {
       if (!confirmed) return;
     }
     try {
-      await ref.read(officeControllerProvider.notifier).setOfficeActive(office.id, newValue);
+      await ref
+          .read(officeControllerProvider.notifier)
+          .setOfficeActive(office.id, newValue);
     } on OfficeException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -135,7 +142,8 @@ class _OfficeFormSheetState extends ConsumerState<_OfficeFormSheet> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.office?.name ?? '');
-    _locationController = TextEditingController(text: widget.office?.location ?? '');
+    _locationController =
+        TextEditingController(text: widget.office?.location ?? '');
   }
 
   @override
@@ -164,7 +172,8 @@ class _OfficeFormSheetState extends ConsumerState<_OfficeFormSheet> {
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isEditing ? 'Office updated.' : 'Office added.')),
+        SnackBar(
+            content: Text(_isEditing ? 'Office updated.' : 'Office added.')),
       );
     } on OfficeException catch (e) {
       if (!mounted) return;
@@ -199,13 +208,16 @@ class _OfficeFormSheetState extends ConsumerState<_OfficeFormSheet> {
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Office Name'),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Name is required' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _locationController,
               decoration: const InputDecoration(labelText: 'Location'),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Location is required' : null,
+              validator: (v) => (v == null || v.trim().isEmpty)
+                  ? 'Location is required'
+                  : null,
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -214,7 +226,8 @@ class _OfficeFormSheetState extends ConsumerState<_OfficeFormSheet> {
                   ? const SizedBox(
                       height: 20,
                       width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
                     )
                   : Text(_isEditing ? 'Save Changes' : 'Add Office'),
             ),
