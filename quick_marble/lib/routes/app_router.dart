@@ -1,20 +1,22 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
-import '../screens/splash/splash_screen.dart';
-import '../screens/auth/login_screen.dart';
-import '../screens/dashboard/dashboard_screen.dart';
-import '../screens/settings/settings_home_screen.dart';
-import '../screens/settings/offices_screen.dart';
-import '../screens/settings/users_screen.dart';
-import '../screens/clients/clients_screen.dart';
-import '../screens/quotations/quotations_screen.dart';
-import '../screens/contracts/contracts_screen.dart';
 import '../screens/activity/activity_screen.dart';
+import '../screens/auth/login_screen.dart';
+import '../screens/clients/clients_screen.dart';
+import '../screens/contracts/contracts_screen.dart';
+import '../screens/dashboard/dashboard_screen.dart';
+import '../screens/quotations/quotations_screen.dart';
 import '../screens/reports/reports_screen.dart';
+import '../screens/settings/materials_screen.dart';
+import '../screens/settings/offices_screen.dart';
+import '../screens/settings/settings_home_screen.dart';
+import '../screens/settings/users_screen.dart';
+import '../screens/splash/splash_screen.dart';
 
 /// Route paths centralized here to avoid magic strings scattered across
 /// the app.
@@ -31,6 +33,7 @@ class AppRoutes {
   static const contracts = '/contracts';
   static const activity = '/activity';
   static const reports = '/reports';
+  static const settingsMaterials = '/settings/materials';
 }
 
 /// Bridges a Riverpod stream to something GoRouter's `refreshListenable`
@@ -62,7 +65,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = user != null;
       final isGoingToLogin = state.matchedLocation == AppRoutes.login;
       final isSplash = state.matchedLocation == AppRoutes.splash;
-      final isGoingToSettings = state.matchedLocation.startsWith(AppRoutes.settings);
+      final isGoingToSettings =
+          state.matchedLocation.startsWith(AppRoutes.settings);
 
       if (isSplash) return null; // let splash decide once it finishes checking
 
@@ -77,6 +81,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: AppRoutes.settingsMaterials,
+        builder: (context, state) => const MaterialsScreen(),
+      ),
       GoRoute(
         path: AppRoutes.splash,
         builder: (context, state) => const SplashScreen(),

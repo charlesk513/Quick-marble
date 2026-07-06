@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+
+import '../../models/activity_log.dart';
 import '../../providers/activity_log_provider.dart';
 import '../../widgets/empty_state.dart';
 
@@ -9,14 +11,15 @@ class ActivityScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final logs = ref.watch(activityLogsProvider).valueOrNull ?? [];
+    final logs = ref.watch(visibleActivityLogsProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Activity & Notifications')),
       body: logs.isEmpty
           ? const EmptyState(
               icon: Icons.notifications_active_outlined,
               title: 'No activity yet',
-              message: 'Important actions will appear here once Firebase sync is connected.',
+              message:
+                  'Important actions will appear here once Firebase sync is connected.',
             )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -26,8 +29,10 @@ class ActivityScreen extends ConsumerWidget {
                 return Card(
                   child: ListTile(
                     leading: const CircleAvatar(child: Icon(Icons.history)),
-                    title: Text('${log.action} ${log.entityType}'),
-                    subtitle: Text('${log.entityLabel}\n${log.actorName} · ${DateFormat.yMMMd().add_jm().format(log.createdAt)}'),
+                    title: Text('${log.action.label} ${log.entityType}'),
+                    subtitle: Text(
+                      '${log.message}\n${log.actorName} · ${DateFormat.yMMMd().add_jm().format(log.createdAt)}',
+                    ),
                     isThreeLine: true,
                   ),
                 );

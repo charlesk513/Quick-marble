@@ -24,25 +24,59 @@ extension QuotationStatusX on QuotationStatus {
   }
 }
 
+enum QuotationItemType { manual, material }
+
 class QuotationItem {
   final String description;
   final double quantity;
   final double unitPrice;
 
+  final QuotationItemType type;
+  final String? materialId;
+  final String? materialName;
+  final double? widthCm;
+  final double? lengthCm;
+
   const QuotationItem({
     required this.description,
     required this.quantity,
     required this.unitPrice,
+    this.type = QuotationItemType.manual,
+    this.materialId,
+    this.materialName,
+    this.widthCm,
+    this.lengthCm,
   });
 
   double get subtotal => quantity * unitPrice;
 
-  QuotationItem copyWith(
-      {String? description, double? quantity, double? unitPrice}) {
+  static double granitePrice({
+    required double widthCm,
+    required double lengthCm,
+    required double cost,
+  }) {
+    return ((widthCm / 100) * (lengthCm / 100)) / (60 / 100) * cost;
+  }
+
+  QuotationItem copyWith({
+    String? description,
+    double? quantity,
+    double? unitPrice,
+    QuotationItemType? type,
+    String? materialId,
+    String? materialName,
+    double? widthCm,
+    double? lengthCm,
+  }) {
     return QuotationItem(
       description: description ?? this.description,
       quantity: quantity ?? this.quantity,
       unitPrice: unitPrice ?? this.unitPrice,
+      type: type ?? this.type,
+      materialId: materialId ?? this.materialId,
+      materialName: materialName ?? this.materialName,
+      widthCm: widthCm ?? this.widthCm,
+      lengthCm: lengthCm ?? this.lengthCm,
     );
   }
 
@@ -50,12 +84,24 @@ class QuotationItem {
         description: map['description'] as String? ?? '',
         quantity: (map['quantity'] as num?)?.toDouble() ?? 0,
         unitPrice: (map['unitPrice'] as num?)?.toDouble() ?? 0,
+        type: map['type'] == 'material'
+            ? QuotationItemType.material
+            : QuotationItemType.manual,
+        materialId: map['materialId'] as String?,
+        materialName: map['materialName'] as String?,
+        widthCm: (map['widthCm'] as num?)?.toDouble(),
+        lengthCm: (map['lengthCm'] as num?)?.toDouble(),
       );
 
   Map<String, dynamic> toMap() => {
         'description': description,
         'quantity': quantity,
         'unitPrice': unitPrice,
+        'type': type.name,
+        'materialId': materialId,
+        'materialName': materialName,
+        'widthCm': widthCm,
+        'lengthCm': lengthCm,
       };
 }
 
