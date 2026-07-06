@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/client.dart';
+import '../../models/material_item.dart';
 import '../../models/quotation.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/client_provider.dart';
 import '../../providers/contract_provider.dart';
+import '../../providers/material_provider.dart';
+import '../../providers/office_provider.dart';
 import '../../providers/quotation_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../shared/money_text.dart';
@@ -27,9 +32,7 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
       final text = '${q.number} ${q.clientName} ${q.notes}'
           .toLowerCase()
           .contains(_query.toLowerCase());
-
       final status = _statusFilter == null || q.status == _statusFilter;
-
       return text && status;
     }).toList();
 
@@ -87,8 +90,10 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                     itemCount: filtered.length,
                     itemBuilder: (context, index) => _QuotationCard(
                       quotation: filtered[index],
-                      onEdit: () => _showQuotationSheet(context,
-                          quotation: filtered[index]),
+                      onEdit: () => _showQuotationSheet(
+                        context,
+                        quotation: filtered[index],
+                      ),
                     ),
                   ),
           ),
@@ -101,25 +106,30 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
     BuildContext context, {
     Quotation? quotation,
   }) async {
+    final user = ref.read(currentUserProvider);
+    final offices = ref.read(activeOfficesProvider);
+    final materials = ref.read(activeMaterialsProvider);
     final clients =
         ref.read(visibleClientsProvider).where((c) => c.isActive).toList();
 
-    if (clients.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add a client first.')),
-      );
-      return;
-    }
-
     final formKey = GlobalKey<FormState>();
+    var creatingNewClient = quotation == null && clients.isEmpty;
 
-    var client = quotation == null
-        ? clients.first
-        : clients.firstWhere(
-            (c) => c.id == quotation.clientId,
-            orElse: () => clients.first,
-          );
+    Client? selectedClient = clients.isNotEmpty
+        ? quotation == null
+            ? clients.first
+            : clients.firstWhere(
+                (c) => c.id == quotation.clientId,
+                orElse: () => clients.first,
+              )
+        : null;
 
+    String newClientOfficeId =
+        user?.assignedOfficeId ?? selectedClient?.officeId ?? offices.first.id;
+
+    final newClientName = TextEditingController();
+    final newClientPhone = TextEditingController();
+    final newClientAddress = TextEditingController();
     final notes = TextEditingController(text: quotation?.notes ?? '');
 
     final itemControllers = <_QuoteItemControllers>[
@@ -176,29 +186,119 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: client.id,
-                      isExpanded: true,
-                      decoration: const InputDecoration(labelText: 'Client'),
-                      items: clients
-                          .map(
-                            (item) => DropdownMenuItem(
-                              value: item.id,
-                              child: Text(item.name),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setModalState(() {
-                          client = clients.firstWhere((c) => c.id == value);
-                        });
-                      },
-                    ),
+                    if (quotation == null)
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title:
+                            const Text('Create new client for this quotation'),
+                        value: creatingNewClient,
+                        onChanged: (value) {
+                          setModalState(() => creatingNewClient = value);
+                        },
+                      ),
+                    if (!creatingNewClient)
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedClient?.id,
+                        isExpanded: true,
+                        decoration: const InputDecoration(labelText: 'Client'),
+                        items: clients
+                            .map(
+                              (item) => DropdownMenuItem(
+                                value: item.id,
+                                child: Text(item.name),
+                              ),
+                            )
+                            .toList(),
+                        validator: (value) =>
+                            value == null ? 'Select a client' : null,
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setModalState(() {
+                            selectedClient =
+                                clients.firstWhere((c) => c.id == value);
+                          });
+                        },
+                      )
+                    else ...[
+                      if (user?.isAdministrator == true)
+                        DropdownButtonFormField<String>(
+                          initialValue: newClientOfficeId,
+                          isExpanded: true,
+                          decoration:
+                              const InputDecoration(labelText: 'Office'),
+                          items: offices
+                              .map(
+                                (office) => DropdownMenuItem(
+                                  value: office.id,
+                                  child: Text(office.name),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setModalState(() => newClientOfficeId = value);
+                          },
+                        ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: newClientName,
+                        decoration:
+                            const InputDecoration(labelText: 'Client name'),
+                        validator: creatingNewClient ? _required : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: newClientPhone,
+                        decoration: const InputDecoration(labelText: 'Phone'),
+                        keyboardType: TextInputType.phone,
+                        validator: creatingNewClient ? _required : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: newClientAddress,
+                        decoration: const InputDecoration(
+                          labelText: 'Address / Location',
+                        ),
+                        validator: creatingNewClient ? _required : null,
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     ...itemControllers.asMap().entries.map((entry) {
                       final index = entry.key;
                       final item = entry.value;
+
+                      MaterialItem? selectedMaterial() {
+                        if (item.materialId == null) return null;
+                        return materials
+                            .where((material) => material.id == item.materialId)
+                            .firstOrNull;
+                      }
+
+                      void recalculateMaterialPrice() {
+                        final material = selectedMaterial();
+                        if (material == null) return;
+
+                        item.description.text = material.name;
+                        item.quantity.text = '1';
+
+                        final width =
+                            double.tryParse(item.widthCm.text.trim()) ?? 0;
+                        final length =
+                            double.tryParse(item.lengthCm.text.trim()) ?? 0;
+
+                        if (width <= 0 || length <= 0) {
+                          item.unitPrice.clear();
+                          return;
+                        }
+
+                        final price = QuotationItem.granitePrice(
+                          widthCm: width,
+                          lengthCm: length,
+                          cost: material.sellingPricePerUnit,
+                        );
+
+                        item.unitPrice.text = price.toStringAsFixed(0);
+                      }
 
                       return Card(
                         child: Padding(
@@ -211,8 +311,7 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                                     child: Text(
                                       'Item ${index + 1}',
                                       style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                          fontWeight: FontWeight.bold),
                                     ),
                                   ),
                                   if (itemControllers.length > 1)
@@ -226,41 +325,147 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                                     ),
                                 ],
                               ),
-                              TextFormField(
-                                controller: item.description,
-                                decoration: const InputDecoration(
-                                  labelText: 'Description',
-                                ),
-                                validator: _required,
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: TextFormField(
-                                      controller: item.quantity,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Qty',
-                                      ),
-                                      keyboardType: TextInputType.number,
-                                      validator: _positiveNumber,
-                                      onChanged: (_) => setModalState(() {}),
-                                    ),
+                              SegmentedButton<QuotationItemType>(
+                                segments: const [
+                                  ButtonSegment(
+                                    value: QuotationItemType.manual,
+                                    label: Text('Manual'),
+                                    icon: Icon(Icons.edit_note),
                                   ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: TextFormField(
-                                      controller: item.unitPrice,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Unit price',
-                                      ),
-                                      keyboardType: TextInputType.number,
-                                      validator: _positiveNumber,
-                                      onChanged: (_) => setModalState(() {}),
-                                    ),
+                                  ButtonSegment(
+                                    value: QuotationItemType.material,
+                                    label: Text('Material'),
+                                    icon: Icon(Icons.square_foot),
                                   ),
                                 ],
+                                selected: {item.type},
+                                onSelectionChanged: (values) {
+                                  setModalState(() {
+                                    item.type = values.first;
+                                    if (item.type ==
+                                            QuotationItemType.material &&
+                                        materials.isNotEmpty) {
+                                      item.materialId ??= materials.first.id;
+                                      item.description.text = materials
+                                          .firstWhere(
+                                            (material) =>
+                                                material.id == item.materialId,
+                                          )
+                                          .name;
+                                      item.quantity.text = '1';
+                                      recalculateMaterialPrice();
+                                    }
+                                  });
+                                },
                               ),
+                              const SizedBox(height: 12),
+                              if (item.type == QuotationItemType.material) ...[
+                                DropdownButtonFormField<String>(
+                                  initialValue: item.materialId ??
+                                      materials.firstOrNull?.id,
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(
+                                      labelText: 'Material'),
+                                  items: materials
+                                      .map(
+                                        (material) => DropdownMenuItem(
+                                          value: material.id,
+                                          child: Text(material.name),
+                                        ),
+                                      )
+                                      .toList(),
+                                  validator: (_) => materials.isEmpty
+                                      ? 'Add materials in Settings first'
+                                      : null,
+                                  onChanged: (value) {
+                                    if (value == null) return;
+                                    setModalState(() {
+                                      item.materialId = value;
+                                      final material = materials
+                                          .firstWhere((m) => m.id == value);
+                                      item.description.text = material.name;
+                                      item.quantity.text = '1';
+                                      recalculateMaterialPrice();
+                                    });
+                                  },
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: item.widthCm,
+                                        decoration: const InputDecoration(
+                                            labelText: 'Width cm'),
+                                        keyboardType: TextInputType.number,
+                                        validator: _positiveNumber,
+                                        onChanged: (_) {
+                                          recalculateMaterialPrice();
+                                          setModalState(() {});
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: item.lengthCm,
+                                        decoration: const InputDecoration(
+                                            labelText: 'Length cm'),
+                                        keyboardType: TextInputType.number,
+                                        validator: _positiveNumber,
+                                        onChanged: (_) {
+                                          recalculateMaterialPrice();
+                                          setModalState(() {});
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                TextFormField(
+                                  controller: item.unitPrice,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Calculated price',
+                                    prefixText: 'UGX ',
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  validator: _positiveNumber,
+                                  onChanged: (_) => setModalState(() {}),
+                                ),
+                              ] else ...[
+                                TextFormField(
+                                  controller: item.description,
+                                  decoration: const InputDecoration(
+                                      labelText: 'Description'),
+                                  validator: _required,
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: item.quantity,
+                                        decoration: const InputDecoration(
+                                            labelText: 'Qty'),
+                                        keyboardType: TextInputType.number,
+                                        validator: _positiveNumber,
+                                        onChanged: (_) => setModalState(() {}),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: item.unitPrice,
+                                        decoration: const InputDecoration(
+                                            labelText: 'Unit price'),
+                                        keyboardType: TextInputType.number,
+                                        validator: _positiveNumber,
+                                        onChanged: (_) => setModalState(() {}),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -303,12 +508,21 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                               .map(
                                 (item) => QuotationItem(
                                   description: item.description.text.trim(),
-                                  quantity: double.parse(
-                                    item.quantity.text.trim(),
-                                  ),
-                                  unitPrice: double.parse(
-                                    item.unitPrice.text.trim(),
-                                  ),
+                                  quantity:
+                                      double.parse(item.quantity.text.trim()),
+                                  unitPrice:
+                                      double.parse(item.unitPrice.text.trim()),
+                                  type: item.type,
+                                  materialId: item.materialId,
+                                  materialName: materials
+                                      .where((material) =>
+                                          material.id == item.materialId)
+                                      .map((material) => material.name)
+                                      .firstOrNull,
+                                  widthCm:
+                                      double.tryParse(item.widthCm.text.trim()),
+                                  lengthCm: double.tryParse(
+                                      item.lengthCm.text.trim()),
                                 ),
                               )
                               .toList();
@@ -317,19 +531,34 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                               ref.read(quotationControllerProvider.notifier);
 
                           if (quotation == null) {
+                            final clientForQuote = creatingNewClient
+                                ? await ref
+                                    .read(clientControllerProvider.notifier)
+                                    .createClient(
+                                      officeId: newClientOfficeId,
+                                      name: newClientName.text.trim(),
+                                      phone: newClientPhone.text.trim(),
+                                      email: '',
+                                      address: newClientAddress.text.trim(),
+                                      notes: 'Created from quotation screen.',
+                                    )
+                                : selectedClient!;
+
                             await controller.createQuotation(
-                              officeId: client.officeId,
-                              clientId: client.id,
-                              clientName: client.name,
+                              officeId: clientForQuote.officeId,
+                              clientId: clientForQuote.id,
+                              clientName: clientForQuote.name,
                               items: items,
                               notes: notes.text.trim(),
                             );
                           } else {
+                            final clientForQuote = selectedClient!;
+
                             await controller.updateQuotation(
                               quotation.copyWith(
-                                officeId: client.officeId,
-                                clientId: client.id,
-                                clientName: client.name,
+                                officeId: clientForQuote.officeId,
+                                clientId: clientForQuote.id,
+                                clientName: clientForQuote.name,
                                 items: items,
                                 notes: notes.text.trim(),
                               ),
@@ -520,11 +749,20 @@ class _QuoteItemControllers {
   final TextEditingController description;
   final TextEditingController quantity;
   final TextEditingController unitPrice;
+  final TextEditingController widthCm;
+  final TextEditingController lengthCm;
+
+  QuotationItemType type;
+  String? materialId;
 
   _QuoteItemControllers({
     required this.description,
     required this.quantity,
     required this.unitPrice,
+    required this.widthCm,
+    required this.lengthCm,
+    required this.type,
+    required this.materialId,
   });
 
   factory _QuoteItemControllers.empty() {
@@ -532,6 +770,10 @@ class _QuoteItemControllers {
       description: TextEditingController(),
       quantity: TextEditingController(text: '1'),
       unitPrice: TextEditingController(),
+      widthCm: TextEditingController(),
+      lengthCm: TextEditingController(),
+      type: QuotationItemType.manual,
+      materialId: null,
     );
   }
 
@@ -540,6 +782,12 @@ class _QuoteItemControllers {
       description: TextEditingController(text: item.description),
       quantity: TextEditingController(text: item.quantity.toString()),
       unitPrice: TextEditingController(text: item.unitPrice.toStringAsFixed(0)),
+      widthCm:
+          TextEditingController(text: item.widthCm?.toStringAsFixed(0) ?? ''),
+      lengthCm:
+          TextEditingController(text: item.lengthCm?.toStringAsFixed(0) ?? ''),
+      type: item.type,
+      materialId: item.materialId,
     );
   }
 }

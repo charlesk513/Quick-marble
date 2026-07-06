@@ -12,7 +12,13 @@ class SettingsHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(
+        title: const Text('Settings'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(AppRoutes.dashboard),
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -28,6 +34,13 @@ class SettingsHomeScreen extends StatelessWidget {
             title: 'Manage Users',
             subtitle: 'Add staff, assign roles and offices',
             onTap: () => context.push(AppRoutes.settingsUsers),
+          ),
+          const SizedBox(height: 12),
+          _SettingsTile(
+            icon: Icons.inventory_2_outlined,
+            title: 'Materials',
+            subtitle: 'Granite, marble, prices and units',
+            onTap: () => context.push(AppRoutes.settingsMaterials),
           ),
           const SizedBox(height: 12),
           const _SettingsTile(
@@ -58,19 +71,28 @@ class _SettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final disabled = onTap == null;
+
     return Card(
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 8,
+        ),
         leading: CircleAvatar(
           backgroundColor: disabled
               ? Colors.grey[300]
               : Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-          child: Icon(icon,
-              color: disabled
-                  ? Colors.grey[600]
-                  : Theme.of(context).colorScheme.primary),
+          child: Icon(
+            icon,
+            color: disabled
+                ? Colors.grey[600]
+                : Theme.of(context).colorScheme.primary,
+          ),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
         subtitle: Text(subtitle),
         trailing: disabled ? null : const Icon(Icons.chevron_right),
         enabled: !disabled,

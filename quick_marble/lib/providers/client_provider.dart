@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/client.dart';
 import '../providers/auth_provider.dart';
 import '../services/client_service.dart';
@@ -17,14 +18,16 @@ final visibleClientsProvider = Provider<List<Client>>((ref) {
   final clients = ref.watch(clientsStreamProvider).valueOrNull ?? [];
   if (user == null) return [];
   if (user.isAdministrator) return clients;
-  return clients.where((client) => client.officeId == user.assignedOfficeId).toList();
+  return clients
+      .where((client) => client.officeId == user.assignedOfficeId)
+      .toList();
 });
 
 class ClientController extends StateNotifier<AsyncValue<void>> {
   final ClientService _service;
   ClientController(this._service) : super(const AsyncValue.data(null));
 
-  Future<void> createClient({
+  Future<Client> createClient({
     required String officeId,
     required String name,
     required String phone,
@@ -34,7 +37,7 @@ class ClientController extends StateNotifier<AsyncValue<void>> {
   }) async {
     state = const AsyncValue.loading();
     try {
-      await _service.createClient(
+      final client = await _service.createClient(
         officeId: officeId,
         name: name,
         phone: phone,
@@ -43,6 +46,7 @@ class ClientController extends StateNotifier<AsyncValue<void>> {
         notes: notes,
       );
       state = const AsyncValue.data(null);
+      return client;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;
