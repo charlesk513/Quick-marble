@@ -63,6 +63,14 @@ class MockContractService implements ContractService {
   }
 
   @override
+  Future<void> updateContract(Contract contract) async {
+    final index = _contracts.indexWhere((item) => item.id == contract.id);
+    if (index == -1) return;
+    _contracts[index] = contract.copyWith(updatedAt: DateTime.now());
+    _emit();
+  }
+
+  @override
   Future<void> updateStatus(String contractId, ContractStatus status) async {
     final index = _contracts.indexWhere((item) => item.id == contractId);
     if (index == -1) return;
