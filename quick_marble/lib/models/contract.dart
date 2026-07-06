@@ -23,10 +23,14 @@ class Contract {
   final String officeId;
   final String clientName;
   final double value;
+  final double amountPaid;
+  final String documentName;
+  final String notes;
   final ContractStatus status;
   final DateTime startDate;
   final DateTime? completionDate;
   final DateTime createdAt;
+  final DateTime updatedAt;
 
   const Contract({
     required this.id,
@@ -36,13 +40,27 @@ class Contract {
     required this.officeId,
     required this.clientName,
     required this.value,
+    required this.amountPaid,
+    required this.documentName,
+    required this.notes,
     required this.status,
     required this.startDate,
     required this.completionDate,
     required this.createdAt,
+    required this.updatedAt,
   });
 
-  Contract copyWith({ContractStatus? status, DateTime? completionDate}) {
+  double get balance => value - amountPaid;
+  bool get isPaidFully => balance <= 0;
+
+  Contract copyWith({
+    double? amountPaid,
+    String? documentName,
+    String? notes,
+    ContractStatus? status,
+    DateTime? completionDate,
+    DateTime? updatedAt,
+  }) {
     return Contract(
       id: id,
       number: number,
@@ -51,10 +69,14 @@ class Contract {
       officeId: officeId,
       clientName: clientName,
       value: value,
+      amountPaid: amountPaid ?? this.amountPaid,
+      documentName: documentName ?? this.documentName,
+      notes: notes ?? this.notes,
       status: status ?? this.status,
       startDate: startDate,
       completionDate: completionDate ?? this.completionDate,
       createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }
