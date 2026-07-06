@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import '../models/contract.dart';
 import '../models/quotation.dart';
 import 'contract_service.dart';
@@ -8,6 +9,10 @@ class MockContractService implements ContractService {
   int _lastSequence = 1;
   final List<Contract> _contracts = [
     Contract(
+      amountPaid: 0,
+      documentName: '',
+      notes: '',
+      updatedAt: DateTime(2026, 7, 4),
       id: 'contract-1',
       number: 'QMC-2026-000001',
       quotationId: 'quote-1',
@@ -30,7 +35,8 @@ class MockContractService implements ContractService {
 
   @override
   Future<Contract> createFromQuotation(Quotation quotation) async {
-    final existing = _contracts.where((c) => c.quotationId == quotation.id).toList();
+    final existing =
+        _contracts.where((c) => c.quotationId == quotation.id).toList();
     if (existing.isNotEmpty) return existing.first;
     final now = DateTime.now();
     _lastSequence++;
@@ -42,10 +48,14 @@ class MockContractService implements ContractService {
       officeId: quotation.officeId,
       clientName: quotation.clientName,
       value: quotation.total,
+      amountPaid: 0,
+      documentName: '',
+      notes: '',
       status: ContractStatus.pending,
       startDate: now,
       completionDate: null,
       createdAt: now,
+      updatedAt: now,
     );
     _contracts.insert(0, contract);
     _emit();
@@ -58,13 +68,16 @@ class MockContractService implements ContractService {
     if (index == -1) return;
     _contracts[index] = _contracts[index].copyWith(
       status: status,
-      completionDate: status == ContractStatus.completed ? DateTime.now() : null,
+      completionDate:
+          status == ContractStatus.completed ? DateTime.now() : null,
+      updatedAt: DateTime.now(),
     );
     _emit();
   }
 
   void _emit() {
-    final copy = [..._contracts]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final copy = [..._contracts]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     _controller.add(List.unmodifiable(copy));
   }
 }
