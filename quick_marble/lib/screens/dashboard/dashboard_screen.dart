@@ -28,13 +28,23 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-class _DashboardContent extends ConsumerWidget {
+class _DashboardContent extends ConsumerStatefulWidget {
   final AppUser user;
   const _DashboardContent({required this.user});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DashboardContent> createState() => _DashboardContentState();
+}
+
+class _DashboardContentState extends ConsumerState<_DashboardContent> {
+  int _selectedOfficeIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
     final stats = ref.watch(dashboardStatsProvider);
+    final officeStats = ref.watch(officeDashboardStatsProvider);
+    final selectedOffice =
+    officeStats.isEmpty ? null : officeStats[_selectedOfficeIndex];
 
     return Scaffold(
       appBar: AppBar(
@@ -48,7 +58,7 @@ class _DashboardContent extends ConsumerWidget {
           ),
         ],
       ),
-      drawer: _AppDrawer(user: user),
+      drawer: _AppDrawer(user: widget.user),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -62,11 +72,12 @@ class _DashboardContent extends ConsumerWidget {
                       radius: 26,
                       backgroundColor: AppColors.green,
                       child: Text(
-                        user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                        widget.user.name.isNotEmpty ? widget.user.name[0].toUpperCase() : '?',
                         style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20),
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -74,12 +85,14 @@ class _DashboardContent extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('A Service On Your Time',
-                              style: Theme.of(context).textTheme.titleMedium),
                           Text(
-                            user.isAdministrator
-                                ? '${user.role.label} · All offices'
-                                : '${user.role.label} · ${user.assignedOfficeId}',
+                            'A Service On Your Time',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          Text(
+                            widget.user.isAdministrator
+                                ? '${widget.user.role.label} · All offices'
+                                : '${widget.user.role.label} · ${widget.user.assignedOfficeId}',
                             style: TextStyle(color: Colors.grey[600]),
                           ),
                         ],
@@ -90,6 +103,66 @@ class _DashboardContent extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
+            Text(
+              'Office Performance',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 48,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: officeStats.length,
+                itemBuilder: (context, index) {
+                  final office = officeStats[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Text(office.officeName),
+                      selected: index == _selectedOfficeIndex,
+onSelected: (_) {
+  setState(() => _selectedOfficeIndex = index);
+},
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            if (selectedOffice != null) ...[
+  const SizedBox(height: 12),
+  Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            selectedOffice.officeName,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const Divider(),
+          _MoneyLine(
+            label: 'Quotation value',
+            amount: selectedOffice.stats.quotationValue,
+          ),
+          _MoneyLine(
+            label: 'Contract value',
+            amount: selectedOffice.stats.contractValue,
+          ),
+          _MoneyLine(
+            label: 'Paid',
+            amount: selectedOffice.stats.paidValue,
+          ),
+          _MoneyLine(
+            label: 'Outstanding',
+            amount: selectedOffice.stats.outstandingBalance,
+          ),
+        ],
+      ),
+    ),
+  ),
+],
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -99,21 +172,25 @@ class _DashboardContent extends ConsumerWidget {
               childAspectRatio: 1.25,
               children: [
                 _StatCard(
-                    title: 'Clients',
-                    value: stats.clients.toString(),
-                    icon: Icons.people_outline),
+                  title: 'Clients',
+                  value: stats.clients.toString(),
+                  icon: Icons.people_outline,
+                ),
                 _StatCard(
-                    title: 'Quotations',
-                    value: stats.quotations.toString(),
-                    icon: Icons.request_quote_outlined),
+                  title: 'Quotations',
+                  value: stats.quotations.toString(),
+                  icon: Icons.request_quote_outlined,
+                ),
                 _StatCard(
-                    title: 'Pending',
-                    value: stats.pendingQuotations.toString(),
-                    icon: Icons.pending_actions_outlined),
+                  title: 'Pending',
+                  value: stats.pendingQuotations.toString(),
+                  icon: Icons.pending_actions_outlined,
+                ),
                 _StatCard(
-                    title: 'Contracts',
-                    value: stats.contracts.toString(),
-                    icon: Icons.assignment_turned_in_outlined),
+                  title: 'Contracts',
+                  value: stats.contracts.toString(),
+                  icon: Icons.assignment_turned_in_outlined,
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -123,13 +200,27 @@ class _DashboardContent extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Financial Snapshot',
-                        style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      'Financial Snapshot',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const Divider(),
                     _MoneyLine(
-                        label: 'Quotation value', amount: stats.quotationValue),
+                      label: 'Quotation value',
+                      amount: stats.quotationValue,
+                    ),
                     _MoneyLine(
-                        label: 'Contract value', amount: stats.contractValue),
+                      label: 'Contract value',
+                      amount: stats.contractValue,
+                    ),
+                    _MoneyLine(
+                      label: 'Paid',
+                      amount: stats.paidValue,
+                    ),
+                    _MoneyLine(
+                      label: 'Outstanding',
+                      amount: stats.outstandingBalance,
+                    ),
                   ],
                 ),
               ),
@@ -140,21 +231,25 @@ class _DashboardContent extends ConsumerWidget {
               runSpacing: 10,
               children: [
                 _QuickAction(
-                    label: 'Clients',
-                    icon: Icons.people_outline,
-                    route: AppRoutes.clients),
+                  label: 'Clients',
+                  icon: Icons.people_outline,
+                  route: AppRoutes.clients,
+                ),
                 _QuickAction(
-                    label: 'Quotations',
-                    icon: Icons.request_quote_outlined,
-                    route: AppRoutes.quotations),
+                  label: 'Quotations',
+                  icon: Icons.request_quote_outlined,
+                  route: AppRoutes.quotations,
+                ),
                 _QuickAction(
-                    label: 'Contracts',
-                    icon: Icons.assignment_turned_in_outlined,
-                    route: AppRoutes.contracts),
+                  label: 'Contracts',
+                  icon: Icons.assignment_turned_in_outlined,
+                  route: AppRoutes.contracts,
+                ),
                 _QuickAction(
-                    label: 'Reports',
-                    icon: Icons.bar_chart_outlined,
-                    route: AppRoutes.reports),
+                  label: 'Reports',
+                  icon: Icons.bar_chart_outlined,
+                  route: AppRoutes.reports,
+                ),
               ],
             ),
           ],
