@@ -39,7 +39,9 @@ class MockMaterialService implements MaterialService {
   @override
   Stream<List<MaterialItem>> watchMaterials() async* {
     final copy = [..._materials]..sort((a, b) => a.name.compareTo(b.name));
+
     yield List.unmodifiable(copy);
+
     yield* _controller.stream;
   }
 

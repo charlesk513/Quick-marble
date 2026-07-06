@@ -6,6 +6,7 @@ import '../../models/material_item.dart';
 import '../../models/quotation.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/client_provider.dart';
+import '../../providers/company_settings_provider.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/material_provider.dart';
 import '../../providers/office_provider.dart';
@@ -108,7 +109,13 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
   }) async {
     final user = ref.read(currentUserProvider);
     final offices = ref.read(activeOfficesProvider);
-    final materials = ref.read(activeMaterialsProvider);
+    final materials = ref
+            .read(materialsStreamProvider)
+            .valueOrNull
+            ?.where((material) => material.isActive)
+            .toList() ??
+        [];
+    final companySettings = ref.read(companySettingsProvider);
     final clients =
         ref.read(visibleClientsProvider).where((c) => c.isActive).toList();
 
@@ -153,9 +160,9 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
           final sub = subtotal();
-          final vat = sub * Quotation.vatRate;
+          final vat =
+              companySettings.vatEnabled ? sub * companySettings.vatRate : 0.0;
           final total = sub + vat;
-
           return Padding(
             padding: EdgeInsets.only(
               left: 16,
@@ -490,7 +497,13 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                       maxLines: 3,
                     ),
                     const SizedBox(height: 16),
-                    _TotalsPreview(subtotal: sub, vat: vat, total: total),
+                    _TotalsPreview(
+                      subtotal: sub,
+                      vat: vat,
+                      total: total,
+                      vatEnabled: companySettings.vatEnabled,
+                      vatRate: companySettings.vatRate,
+                    ),
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
@@ -601,6 +614,10 @@ class _QuotationCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(companySettingsProvider);
+    final vat =
+        settings.vatEnabled ? quotation.subtotal * settings.vatRate : 0.0;
+    final total = quotation.subtotal + vat;
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 14),
@@ -649,10 +666,14 @@ class _QuotationCard extends ConsumerWidget {
               ...quotation.items.map((item) => _QuotationItemView(item: item)),
               const Divider(height: 24),
               _AmountRow(label: 'Subtotal', value: quotation.subtotal),
-              _AmountRow(label: 'VAT 18%', value: quotation.vat),
+              if (settings.vatEnabled)
+                _AmountRow(
+                  label: 'VAT ${(settings.vatRate * 100).toStringAsFixed(0)}%',
+                  value: vat,
+                ),
               _AmountRow(
                 label: 'Total',
-                value: quotation.total,
+                value: total,
                 bold: true,
               ),
               const SizedBox(height: 12),
@@ -798,11 +819,15 @@ class _TotalsPreview extends StatelessWidget {
   final double subtotal;
   final double vat;
   final double total;
+  final bool vatEnabled;
+  final double vatRate;
 
   const _TotalsPreview({
     required this.subtotal,
     required this.vat,
     required this.total,
+    required this.vatEnabled,
+    required this.vatRate,
   });
 
   @override
@@ -813,7 +838,11 @@ class _TotalsPreview extends StatelessWidget {
         child: Column(
           children: [
             _AmountRow(label: 'Subtotal', value: subtotal),
-            _AmountRow(label: 'VAT 18%', value: vat),
+            if (vatEnabled)
+              _AmountRow(
+                label: 'VAT ${(vatRate * 100).toStringAsFixed(0)}%',
+                value: vat,
+              ),
             _AmountRow(label: 'Total', value: total, bold: true),
           ],
         ),
