@@ -602,91 +602,193 @@ class _QuotationCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    quotation.number,
-                    style: Theme.of(context).textTheme.titleMedium,
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 14),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(
+              color: Theme.of(context).colorScheme.primary,
+              width: 4,
+            ),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      quotation.number,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
                   ),
-                ),
-                Chip(label: Text(quotation.status.label)),
-              ],
-            ),
-            Text(
-              quotation.clientName,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            ...quotation.items.map(
-              (item) => Text(
-                '${item.description} · ${item.quantity} × ${formatUgx(item.unitPrice)}',
+                  Chip(label: Text(quotation.status.label)),
+                ],
               ),
-            ),
-            const Divider(),
-            _AmountRow(label: 'Subtotal', value: quotation.subtotal),
-            _AmountRow(label: 'VAT 18%', value: quotation.vat),
-            _AmountRow(
-              label: 'Total',
-              value: quotation.total,
-              bold: true,
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                if (quotation.status == QuotationStatus.draft)
-                  OutlinedButton(
-                    onPressed: onEdit,
-                    child: const Text('Edit'),
-                  ),
-                if (quotation.status == QuotationStatus.draft)
-                  OutlinedButton(
-                    onPressed: () => ref
-                        .read(quotationControllerProvider.notifier)
-                        .updateStatus(
-                          quotation.id,
-                          QuotationStatus.pendingApproval,
-                        ),
-                    child: const Text('Submit'),
-                  ),
-                if (quotation.status == QuotationStatus.pendingApproval) ...[
-                  OutlinedButton(
-                    onPressed: () => ref
-                        .read(quotationControllerProvider.notifier)
-                        .updateStatus(quotation.id, QuotationStatus.approved),
-                    child: const Text('Approve'),
-                  ),
-                  OutlinedButton(
-                    onPressed: () => ref
-                        .read(quotationControllerProvider.notifier)
-                        .updateStatus(quotation.id, QuotationStatus.rejected),
-                    child: const Text('Reject'),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.person_outline, size: 18),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      quotation.clientName,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ],
-                if (quotation.status == QuotationStatus.approved)
-                  ElevatedButton(
-                    onPressed: () async {
-                      await ref
-                          .read(contractControllerProvider.notifier)
-                          .createFromQuotation(quotation);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Contract created.')),
-                        );
-                      }
-                    },
-                    child: const Text('Create Contract'),
+              ),
+              const SizedBox(height: 12),
+              ...quotation.items.map((item) => _QuotationItemView(item: item)),
+              const Divider(height: 24),
+              _AmountRow(label: 'Subtotal', value: quotation.subtotal),
+              _AmountRow(label: 'VAT 18%', value: quotation.vat),
+              _AmountRow(
+                label: 'Total',
+                value: quotation.total,
+                bold: true,
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  if (quotation.status == QuotationStatus.draft)
+                    OutlinedButton.icon(
+                      onPressed: onEdit,
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      label: const Text('Edit'),
+                    ),
+                  if (quotation.status == QuotationStatus.draft)
+                    OutlinedButton.icon(
+                      onPressed: () => ref
+                          .read(quotationControllerProvider.notifier)
+                          .updateStatus(
+                            quotation.id,
+                            QuotationStatus.pendingApproval,
+                          ),
+                      icon: const Icon(Icons.send_outlined, size: 18),
+                      label: const Text('Submit'),
+                    ),
+                  if (quotation.status == QuotationStatus.pendingApproval) ...[
+                    OutlinedButton.icon(
+                      onPressed: () => ref
+                          .read(quotationControllerProvider.notifier)
+                          .updateStatus(
+                            quotation.id,
+                            QuotationStatus.approved,
+                          ),
+                      icon: const Icon(Icons.check_circle_outline, size: 18),
+                      label: const Text('Approve'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => ref
+                          .read(quotationControllerProvider.notifier)
+                          .updateStatus(
+                            quotation.id,
+                            QuotationStatus.rejected,
+                          ),
+                      icon: const Icon(Icons.cancel_outlined, size: 18),
+                      label: const Text('Reject'),
+                    ),
+                  ],
+                  if (quotation.status == QuotationStatus.approved)
+                    FilledButton.icon(
+                      onPressed: () async {
+                        await ref
+                            .read(contractControllerProvider.notifier)
+                            .createFromQuotation(quotation);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Contract created.'),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.assignment_outlined, size: 18),
+                      label: const Text('Create Contract'),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuotationItemView extends StatelessWidget {
+  final QuotationItem item;
+
+  const _QuotationItemView({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    if (item.type == QuotationItemType.material) {
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.square_foot, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.materialName ?? item.description,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
-              ],
+                  const SizedBox(height: 3),
+                  Text(
+                    'Width: ${item.widthCm?.toStringAsFixed(0) ?? '-'}cm · '
+                    'Length: ${item.lengthCm?.toStringAsFixed(0) ?? '-'}cm',
+                  ),
+                  Text('Calculated: ${formatUgx(item.unitPrice)}'),
+                ],
+              ),
             ),
           ],
         ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.receipt_long_outlined, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '${item.description}\n${item.quantity} × ${formatUgx(item.unitPrice)}',
+            ),
+          ),
+        ],
       ),
     );
   }
