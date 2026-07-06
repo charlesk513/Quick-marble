@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../providers/company_settings_provider.dart';
 import '../../routes/app_router.dart';
 
 /// Entry point for admin-only management screens. Only reachable via a
 /// route guard that checks `isAdministrator` (see app_router.dart), so
 /// this screen doesn't need to re-check the role itself.
-class SettingsHomeScreen extends StatelessWidget {
+class SettingsHomeScreen extends ConsumerWidget {
   const SettingsHomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(companySettingsProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -43,6 +46,48 @@ class SettingsHomeScreen extends StatelessWidget {
             onTap: () => context.push(AppRoutes.settingsMaterials),
           ),
           const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tax Settings',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Enable VAT'),
+                    subtitle: const Text('Apply VAT to quotations and reports'),
+                    value: settings.vatEnabled,
+                    onChanged: (value) {
+                      ref
+                          .read(companySettingsProvider.notifier)
+                          .setVatEnabled(value);
+                    },
+                  ),
+                  TextFormField(
+                    initialValue: (settings.vatRate * 100).toStringAsFixed(0),
+                    decoration: const InputDecoration(
+                      labelText: 'VAT rate (%)',
+                      suffixText: '%',
+                    ),
+                    keyboardType: TextInputType.number,
+                    enabled: settings.vatEnabled,
+                    onChanged: (value) {
+                      final parsed = double.tryParse(value);
+                      if (parsed == null) return;
+                      ref
+                          .read(companySettingsProvider.notifier)
+                          .setVatRate(parsed / 100);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
           const _SettingsTile(
             icon: Icons.business_outlined,
             title: 'Company Profile',
