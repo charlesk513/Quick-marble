@@ -31,7 +31,7 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
   @override
   Widget build(BuildContext context) {
     final quotations = ref.watch(visibleQuotationsProvider);
-
+    final materials = ref.watch(activeMaterialsProvider);
     final filtered = quotations.where((q) {
       final text = '${q.number} ${q.clientName} ${q.notes}'
           .toLowerCase()
@@ -49,7 +49,7 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showQuotationSheet(context),
+        onPressed: () => _showQuotationSheet(context, materials: materials),
         icon: const Icon(Icons.request_quote_outlined),
         label: const Text('New Quote'),
       ),
@@ -103,6 +103,7 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                       onEdit: () => _showQuotationSheet(
                         context,
                         quotation: filtered[index],
+                        materials: materials,
                       ),
                     ),
                   ),
@@ -115,15 +116,11 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
   Future<void> _showQuotationSheet(
     BuildContext context, {
     Quotation? quotation,
+    required List<MaterialItem> materials,
   }) async {
     final user = ref.read(currentUserProvider);
     final offices = ref.read(activeOfficesProvider);
-    final materials = ref
-            .read(materialsStreamProvider)
-            .valueOrNull
-            ?.where((material) => material.isActive)
-            .toList() ??
-        [];
+
     final companySettings = ref.read(companySettingsProvider);
     final clients =
         ref.read(visibleClientsProvider).where((c) => c.isActive).toList();
@@ -379,10 +376,12 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                                   decoration: const InputDecoration(
                                       labelText: 'Material'),
                                   items: materials
-                                      .map((material) => DropdownMenuItem(
-                                            value: material.id,
-                                            child: Text(material.name),
-                                          ))
+                                      .map(
+                                        (material) => DropdownMenuItem(
+                                          value: material.id,
+                                          child: Text(material.name),
+                                        ),
+                                      )
                                       .toList(),
                                   validator: (_) => materials.isEmpty
                                       ? 'Add materials in Settings first'
@@ -442,145 +441,6 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                                   validator: _positiveNumber,
                                   onChanged: (_) => setModalState(() {}),
                                 ),
-                                const SizedBox(height: 12),
-                                SegmentedButton<FixingMode>(
-                                  segments: const [
-                                    ButtonSegment(
-                                      value: FixingMode.sellingOnly,
-                                      label: Text('Selling only'),
-                                    ),
-                                    ButtonSegment(
-                                      value: FixingMode.supplyAndFix,
-                                      label: Text('Supply & fix'),
-                                    ),
-                                  ],
-                                  selected: {item.fixingMode},
-                                  onSelectionChanged: (values) {
-                                    setModalState(() {
-                                      item.fixingMode = values.first;
-                                      if (item.fixingMode ==
-                                          FixingMode.supplyAndFix) {
-                                        item.fixingPlaceType ??=
-                                            FixingPlaceType.furniture;
-                                      }
-                                    });
-                                  },
-                                ),
-                                if (item.fixingMode ==
-                                    FixingMode.supplyAndFix) ...[
-                                  const SizedBox(height: 12),
-                                  DropdownButtonFormField<FixingPlaceType>(
-                                    initialValue: item.fixingPlaceType ??
-                                        FixingPlaceType.furniture,
-                                    isExpanded: true,
-                                    decoration: const InputDecoration(
-                                        labelText: 'Fixing place'),
-                                    items: FixingPlaceType.values
-                                        .map((place) => DropdownMenuItem(
-                                              value: place,
-                                              child: Text(place.label),
-                                            ))
-                                        .toList(),
-                                    onChanged: (value) {
-                                      if (value == null) return;
-                                      setModalState(
-                                          () => item.fixingPlaceType = value);
-                                    },
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      'Required materials: ${(item.fixingPlaceType ?? FixingPlaceType.furniture).requiredMaterials}',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.w600),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  DropdownButtonFormField<
-                                      FixingMaterialPayment>(
-                                    initialValue: item.fixingMaterialPayment,
-                                    isExpanded: true,
-                                    decoration: const InputDecoration(
-                                        labelText: 'Fixing materials payment'),
-                                    items: FixingMaterialPayment.values
-                                        .map((payment) => DropdownMenuItem(
-                                              value: payment,
-                                              child: Text(payment.label),
-                                            ))
-                                        .toList(),
-                                    onChanged: (value) {
-                                      if (value == null) return;
-                                      setModalState(() =>
-                                          item.fixingMaterialPayment = value);
-                                    },
-                                  ),
-                                  if (item.fixingMaterialPayment ==
-                                      FixingMaterialPayment
-                                          .quickMarbleSupplies) ...[
-                                    const SizedBox(height: 10),
-                                    TextFormField(
-                                      controller: item.fixingMaterialsAmount,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Fixing materials charge',
-                                        prefixText: 'UGX ',
-                                      ),
-                                      keyboardType: TextInputType.number,
-                                      validator: _zeroOrPositiveNumber,
-                                      onChanged: (_) => setModalState(() {}),
-                                    ),
-                                  ],
-                                ],
-                                const SizedBox(height: 12),
-                                SwitchListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  title: const Text('Add skirting'),
-                                  value: item.hasSkirting,
-                                  onChanged: (value) => setModalState(
-                                      () => item.hasSkirting = value),
-                                ),
-                                if (item.hasSkirting) ...[
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: TextFormField(
-                                          controller: item.skirtingMeters,
-                                          decoration: const InputDecoration(
-                                              labelText: 'Skirting meters'),
-                                          keyboardType: TextInputType.number,
-                                          validator: _positiveNumber,
-                                          onChanged: (_) =>
-                                              setModalState(() {}),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: TextFormField(
-                                          controller: item.skirtingUnitPrice,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Skirting price/m',
-                                            prefixText: 'UGX ',
-                                          ),
-                                          keyboardType: TextInputType.number,
-                                          validator: _positiveNumber,
-                                          onChanged: (_) =>
-                                              setModalState(() {}),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                                const SizedBox(height: 10),
-                                TextFormField(
-                                  controller: item.transportAmount,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Transport / delivery',
-                                    prefixText: 'UGX ',
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  validator: _zeroOrPositiveNumber,
-                                  onChanged: (_) => setModalState(() {}),
-                                ),
                               ] else ...[
                                 TextFormField(
                                   controller: item.description,
@@ -615,6 +475,146 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                                   ],
                                 ),
                               ],
+                              const SizedBox(height: 12),
+                              SegmentedButton<FixingMode>(
+                                segments: const [
+                                  ButtonSegment(
+                                    value: FixingMode.sellingOnly,
+                                    label: Text('Selling only'),
+                                  ),
+                                  ButtonSegment(
+                                    value: FixingMode.supplyAndFix,
+                                    label: Text('Supply & fix'),
+                                  ),
+                                ],
+                                selected: {item.fixingMode},
+                                onSelectionChanged: (values) {
+                                  setModalState(() {
+                                    item.fixingMode = values.first;
+                                    if (item.fixingMode ==
+                                        FixingMode.supplyAndFix) {
+                                      item.fixingPlaceType ??=
+                                          FixingPlaceType.furniture;
+                                    }
+                                  });
+                                },
+                              ),
+                              if (item.fixingMode ==
+                                  FixingMode.supplyAndFix) ...[
+                                const SizedBox(height: 12),
+                                DropdownButtonFormField<FixingPlaceType>(
+                                  initialValue: item.fixingPlaceType ??
+                                      FixingPlaceType.furniture,
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(
+                                      labelText: 'Fixing place'),
+                                  items: FixingPlaceType.values
+                                      .map(
+                                        (place) => DropdownMenuItem(
+                                          value: place,
+                                          child: Text(place.label),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (value) {
+                                    if (value == null) return;
+                                    setModalState(
+                                        () => item.fixingPlaceType = value);
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    'Required materials: ${(item.fixingPlaceType ?? FixingPlaceType.furniture).requiredMaterials}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                DropdownButtonFormField<FixingMaterialPayment>(
+                                  initialValue: item.fixingMaterialPayment,
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(
+                                      labelText: 'Fixing materials payment'),
+                                  items: FixingMaterialPayment.values
+                                      .map(
+                                        (payment) => DropdownMenuItem(
+                                          value: payment,
+                                          child: Text(payment.label),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (value) {
+                                    if (value == null) return;
+                                    setModalState(() =>
+                                        item.fixingMaterialPayment = value);
+                                  },
+                                ),
+                                if (item.fixingMaterialPayment ==
+                                    FixingMaterialPayment
+                                        .quickMarbleSupplies) ...[
+                                  const SizedBox(height: 10),
+                                  TextFormField(
+                                    controller: item.fixingMaterialsAmount,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Fixing materials charge',
+                                      prefixText: 'UGX ',
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    validator: _zeroOrPositiveNumber,
+                                    onChanged: (_) => setModalState(() {}),
+                                  ),
+                                ],
+                              ],
+                              const SizedBox(height: 12),
+                              SwitchListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text('Add skirting'),
+                                value: item.hasSkirting,
+                                onChanged: (value) => setModalState(
+                                    () => item.hasSkirting = value),
+                              ),
+                              if (item.hasSkirting) ...[
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: item.skirtingMeters,
+                                        decoration: const InputDecoration(
+                                            labelText: 'Skirting meters'),
+                                        keyboardType: TextInputType.number,
+                                        validator: _positiveNumber,
+                                        onChanged: (_) => setModalState(() {}),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: item.skirtingUnitPrice,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Skirting price/m',
+                                          prefixText: 'UGX ',
+                                        ),
+                                        keyboardType: TextInputType.number,
+                                        validator: _positiveNumber,
+                                        onChanged: (_) => setModalState(() {}),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              const SizedBox(height: 10),
+                              TextFormField(
+                                controller: item.transportAmount,
+                                decoration: const InputDecoration(
+                                  labelText: 'Transport / delivery',
+                                  prefixText: 'UGX ',
+                                ),
+                                keyboardType: TextInputType.number,
+                                validator: _zeroOrPositiveNumber,
+                                onChanged: (_) => setModalState(() {}),
+                              ),
                             ],
                           ),
                         ),
