@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../models/contract.dart';
 import '../../providers/contract_provider.dart';
+import '../../routes/app_router.dart';
 import '../../widgets/empty_state.dart';
 import '../shared/money_text.dart';
 
@@ -39,7 +41,13 @@ class _ContractsScreenState extends ConsumerState<ContractsScreen> {
     final totalBalance = contracts.fold<double>(0, (sum, c) => sum + c.balance);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Contracts')),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(AppRoutes.dashboard),
+        ),
+        title: const Text('Contracts'),
+      ),
       body: Column(
         children: [
           Padding(

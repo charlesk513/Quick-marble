@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../models/client.dart';
 import '../../models/material_item.dart';
@@ -11,6 +12,8 @@ import '../../providers/contract_provider.dart';
 import '../../providers/material_provider.dart';
 import '../../providers/office_provider.dart';
 import '../../providers/quotation_provider.dart';
+import '../../routes/app_router.dart';
+import '../../services/quotation_pdf_service.dart';
 import '../../widgets/empty_state.dart';
 import '../shared/money_text.dart';
 
@@ -38,7 +41,13 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
     }).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Quotations')),
+      appBar: AppBar(
+        title: const Text('Quotations'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(AppRoutes.dashboard),
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showQuotationSheet(context),
         icon: const Icon(Icons.request_quote_outlined),
@@ -353,12 +362,8 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                                             QuotationItemType.material &&
                                         materials.isNotEmpty) {
                                       item.materialId ??= materials.first.id;
-                                      item.description.text = materials
-                                          .firstWhere(
-                                            (material) =>
-                                                material.id == item.materialId,
-                                          )
-                                          .name;
+                                      item.description.text =
+                                          materials.first.name;
                                       item.quantity.text = '1';
                                       recalculateMaterialPrice();
                                     }
@@ -374,12 +379,10 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                                   decoration: const InputDecoration(
                                       labelText: 'Material'),
                                   items: materials
-                                      .map(
-                                        (material) => DropdownMenuItem(
-                                          value: material.id,
-                                          child: Text(material.name),
-                                        ),
-                                      )
+                                      .map((material) => DropdownMenuItem(
+                                            value: material.id,
+                                            child: Text(material.name),
+                                          ))
                                       .toList(),
                                   validator: (_) => materials.isEmpty
                                       ? 'Add materials in Settings first'
@@ -432,11 +435,150 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                                 TextFormField(
                                   controller: item.unitPrice,
                                   decoration: const InputDecoration(
-                                    labelText: 'Calculated price',
+                                    labelText: 'Material price',
                                     prefixText: 'UGX ',
                                   ),
                                   keyboardType: TextInputType.number,
                                   validator: _positiveNumber,
+                                  onChanged: (_) => setModalState(() {}),
+                                ),
+                                const SizedBox(height: 12),
+                                SegmentedButton<FixingMode>(
+                                  segments: const [
+                                    ButtonSegment(
+                                      value: FixingMode.sellingOnly,
+                                      label: Text('Selling only'),
+                                    ),
+                                    ButtonSegment(
+                                      value: FixingMode.supplyAndFix,
+                                      label: Text('Supply & fix'),
+                                    ),
+                                  ],
+                                  selected: {item.fixingMode},
+                                  onSelectionChanged: (values) {
+                                    setModalState(() {
+                                      item.fixingMode = values.first;
+                                      if (item.fixingMode ==
+                                          FixingMode.supplyAndFix) {
+                                        item.fixingPlaceType ??=
+                                            FixingPlaceType.furniture;
+                                      }
+                                    });
+                                  },
+                                ),
+                                if (item.fixingMode ==
+                                    FixingMode.supplyAndFix) ...[
+                                  const SizedBox(height: 12),
+                                  DropdownButtonFormField<FixingPlaceType>(
+                                    initialValue: item.fixingPlaceType ??
+                                        FixingPlaceType.furniture,
+                                    isExpanded: true,
+                                    decoration: const InputDecoration(
+                                        labelText: 'Fixing place'),
+                                    items: FixingPlaceType.values
+                                        .map((place) => DropdownMenuItem(
+                                              value: place,
+                                              child: Text(place.label),
+                                            ))
+                                        .toList(),
+                                    onChanged: (value) {
+                                      if (value == null) return;
+                                      setModalState(
+                                          () => item.fixingPlaceType = value);
+                                    },
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      'Required materials: ${(item.fixingPlaceType ?? FixingPlaceType.furniture).requiredMaterials}',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  DropdownButtonFormField<
+                                      FixingMaterialPayment>(
+                                    initialValue: item.fixingMaterialPayment,
+                                    isExpanded: true,
+                                    decoration: const InputDecoration(
+                                        labelText: 'Fixing materials payment'),
+                                    items: FixingMaterialPayment.values
+                                        .map((payment) => DropdownMenuItem(
+                                              value: payment,
+                                              child: Text(payment.label),
+                                            ))
+                                        .toList(),
+                                    onChanged: (value) {
+                                      if (value == null) return;
+                                      setModalState(() =>
+                                          item.fixingMaterialPayment = value);
+                                    },
+                                  ),
+                                  if (item.fixingMaterialPayment ==
+                                      FixingMaterialPayment
+                                          .quickMarbleSupplies) ...[
+                                    const SizedBox(height: 10),
+                                    TextFormField(
+                                      controller: item.fixingMaterialsAmount,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Fixing materials charge',
+                                        prefixText: 'UGX ',
+                                      ),
+                                      keyboardType: TextInputType.number,
+                                      validator: _zeroOrPositiveNumber,
+                                      onChanged: (_) => setModalState(() {}),
+                                    ),
+                                  ],
+                                ],
+                                const SizedBox(height: 12),
+                                SwitchListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: const Text('Add skirting'),
+                                  value: item.hasSkirting,
+                                  onChanged: (value) => setModalState(
+                                      () => item.hasSkirting = value),
+                                ),
+                                if (item.hasSkirting) ...[
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextFormField(
+                                          controller: item.skirtingMeters,
+                                          decoration: const InputDecoration(
+                                              labelText: 'Skirting meters'),
+                                          keyboardType: TextInputType.number,
+                                          validator: _positiveNumber,
+                                          onChanged: (_) =>
+                                              setModalState(() {}),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: TextFormField(
+                                          controller: item.skirtingUnitPrice,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Skirting price/m',
+                                            prefixText: 'UGX ',
+                                          ),
+                                          keyboardType: TextInputType.number,
+                                          validator: _positiveNumber,
+                                          onChanged: (_) =>
+                                              setModalState(() {}),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                                const SizedBox(height: 10),
+                                TextFormField(
+                                  controller: item.transportAmount,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Transport / delivery',
+                                    prefixText: 'UGX ',
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  validator: _zeroOrPositiveNumber,
                                   onChanged: (_) => setModalState(() {}),
                                 ),
                               ] else ...[
@@ -536,6 +678,24 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                                       double.tryParse(item.widthCm.text.trim()),
                                   lengthCm: double.tryParse(
                                       item.lengthCm.text.trim()),
+                                  fixingMode: item.fixingMode,
+                                  fixingPlaceType: item.fixingPlaceType,
+                                  fixingMaterialPayment:
+                                      item.fixingMaterialPayment,
+                                  fixingMaterialsAmount: double.tryParse(item
+                                          .fixingMaterialsAmount.text
+                                          .trim()) ??
+                                      0,
+                                  transportAmount: double.tryParse(
+                                          item.transportAmount.text.trim()) ??
+                                      0,
+                                  hasSkirting: item.hasSkirting,
+                                  skirtingMeters: double.tryParse(
+                                          item.skirtingMeters.text.trim()) ??
+                                      0,
+                                  skirtingUnitPrice: double.tryParse(
+                                          item.skirtingUnitPrice.text.trim()) ??
+                                      0,
                                 ),
                               )
                               .toList();
@@ -601,6 +761,22 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
     if (number == null || number <= 0) return 'Invalid';
     return null;
   }
+
+  String? _zeroOrPositiveNumber(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+
+    final number = double.tryParse(value.trim());
+
+    if (number == null) {
+      return 'Enter a valid number';
+    }
+
+    if (number < 0) {
+      return 'Cannot be negative';
+    }
+
+    return null;
+  }
 }
 
 class _QuotationCard extends ConsumerWidget {
@@ -615,6 +791,7 @@ class _QuotationCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(companySettingsProvider);
+    final pdfService = QuotationPdfService();
     final vat =
         settings.vatEnabled ? quotation.subtotal * settings.vatRate : 0.0;
     final total = quotation.subtotal + vat;
@@ -683,6 +860,17 @@ class _QuotationCard extends ConsumerWidget {
                 spacing: 8,
                 runSpacing: 6,
                 children: [
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      await pdfService.printQuotation(
+                        quotation: quotation,
+                        vatEnabled: settings.vatEnabled,
+                        vatRate: settings.vatRate,
+                      );
+                    },
+                    icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                    label: const Text('PDF'),
+                  ),
                   if (quotation.status == QuotationStatus.draft)
                     OutlinedButton.icon(
                       onPressed: onEdit,
@@ -757,6 +945,8 @@ class _QuotationItemView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (item.type == QuotationItemType.material) {
+      final requiredMaterials = item.fixingPlaceType?.requiredMaterials;
+
       return Container(
         width: double.infinity,
         margin: const EdgeInsets.only(bottom: 8),
@@ -783,7 +973,56 @@ class _QuotationItemView extends StatelessWidget {
                     'Width: ${item.widthCm?.toStringAsFixed(0) ?? '-'}cm · '
                     'Length: ${item.lengthCm?.toStringAsFixed(0) ?? '-'}cm',
                   ),
-                  Text('Calculated: ${formatUgx(item.unitPrice)}'),
+                  Text('Mode: ${item.fixingMode.label}'),
+                  const SizedBox(height: 6),
+                  _MiniAmountRow(
+                    label: 'Material',
+                    amount: item.materialAmount,
+                  ),
+                  if (item.mainLabourAmount > 0)
+                    _MiniAmountRow(
+                      label: 'Main labour',
+                      amount: item.mainLabourAmount,
+                    ),
+                  if (item.hasSkirting) ...[
+                    _MiniAmountRow(
+                      label: 'Skirting',
+                      amount: item.skirtingAmount,
+                    ),
+                    if (item.skirtingLabourAmount > 0)
+                      _MiniAmountRow(
+                        label: 'Skirting labour',
+                        amount: item.skirtingLabourAmount,
+                      ),
+                  ],
+                  if (item.chargeableFixingMaterialsAmount > 0)
+                    _MiniAmountRow(
+                      label: 'Fixing materials',
+                      amount: item.chargeableFixingMaterialsAmount,
+                    ),
+                  if (item.transportAmount > 0)
+                    _MiniAmountRow(
+                      label: 'Transport',
+                      amount: item.transportAmount,
+                    ),
+                  const Divider(),
+                  _MiniAmountRow(
+                    label: 'Item subtotal',
+                    amount: item.subtotal,
+                    bold: true,
+                  ),
+                  if (requiredMaterials != null &&
+                      item.fixingMode == FixingMode.supplyAndFix) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Required fixing materials: $requiredMaterials.',
+                      style: const TextStyle(fontStyle: FontStyle.italic),
+                    ),
+                    Text(
+                      item.fixingMaterialPayment.label,
+                      style: const TextStyle(fontStyle: FontStyle.italic),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -809,6 +1048,34 @@ class _QuotationItemView extends StatelessWidget {
               '${item.description}\n${item.quantity} × ${formatUgx(item.unitPrice)}',
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniAmountRow extends StatelessWidget {
+  final String label;
+  final double amount;
+  final bool bold;
+
+  const _MiniAmountRow({
+    required this.label,
+    required this.amount,
+    this.bold = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = bold ? const TextStyle(fontWeight: FontWeight.bold) : null;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: style),
+          Text(formatUgx(amount), style: style),
         ],
       ),
     );
@@ -882,9 +1149,17 @@ class _QuoteItemControllers {
   final TextEditingController unitPrice;
   final TextEditingController widthCm;
   final TextEditingController lengthCm;
+  final TextEditingController fixingMaterialsAmount;
+  final TextEditingController transportAmount;
+  final TextEditingController skirtingMeters;
+  final TextEditingController skirtingUnitPrice;
 
   QuotationItemType type;
   String? materialId;
+  FixingMode fixingMode;
+  FixingPlaceType? fixingPlaceType;
+  FixingMaterialPayment fixingMaterialPayment;
+  bool hasSkirting;
 
   _QuoteItemControllers({
     required this.description,
@@ -892,8 +1167,16 @@ class _QuoteItemControllers {
     required this.unitPrice,
     required this.widthCm,
     required this.lengthCm,
+    required this.fixingMaterialsAmount,
+    required this.transportAmount,
+    required this.skirtingMeters,
+    required this.skirtingUnitPrice,
     required this.type,
     required this.materialId,
+    required this.fixingMode,
+    required this.fixingPlaceType,
+    required this.fixingMaterialPayment,
+    required this.hasSkirting,
   });
 
   factory _QuoteItemControllers.empty() {
@@ -903,8 +1186,16 @@ class _QuoteItemControllers {
       unitPrice: TextEditingController(),
       widthCm: TextEditingController(),
       lengthCm: TextEditingController(),
+      fixingMaterialsAmount: TextEditingController(text: '0'),
+      transportAmount: TextEditingController(text: '0'),
+      skirtingMeters: TextEditingController(text: '0'),
+      skirtingUnitPrice: TextEditingController(text: '0'),
       type: QuotationItemType.manual,
       materialId: null,
+      fixingMode: FixingMode.sellingOnly,
+      fixingPlaceType: null,
+      fixingMaterialPayment: FixingMaterialPayment.clientProvides,
+      hasSkirting: false,
     );
   }
 
@@ -917,8 +1208,24 @@ class _QuoteItemControllers {
           TextEditingController(text: item.widthCm?.toStringAsFixed(0) ?? ''),
       lengthCm:
           TextEditingController(text: item.lengthCm?.toStringAsFixed(0) ?? ''),
+      fixingMaterialsAmount: TextEditingController(
+        text: item.fixingMaterialsAmount.toStringAsFixed(0),
+      ),
+      transportAmount: TextEditingController(
+        text: item.transportAmount.toStringAsFixed(0),
+      ),
+      skirtingMeters: TextEditingController(
+        text: item.skirtingMeters.toStringAsFixed(0),
+      ),
+      skirtingUnitPrice: TextEditingController(
+        text: item.skirtingUnitPrice.toStringAsFixed(0),
+      ),
       type: item.type,
       materialId: item.materialId,
+      fixingMode: item.fixingMode,
+      fixingPlaceType: item.fixingPlaceType,
+      fixingMaterialPayment: item.fixingMaterialPayment,
+      hasSkirting: item.hasSkirting,
     );
   }
 }

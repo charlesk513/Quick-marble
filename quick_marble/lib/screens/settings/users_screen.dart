@@ -2,12 +2,14 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/themes/app_theme.dart';
 import '../../models/app_user.dart';
 import '../../models/office.dart';
 import '../../providers/office_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../routes/app_router.dart';
 import '../../services/user_service.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/empty_state.dart';
@@ -21,7 +23,13 @@ class UsersScreen extends ConsumerWidget {
     final officesAsync = ref.watch(officesStreamProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Users')),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(AppRoutes.settings),
+        ),
+        title: const Text('Users'),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showUserForm(context, ref),
         icon: const Icon(Icons.person_add_alt_outlined),
