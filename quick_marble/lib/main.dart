@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/themes/app_theme.dart';
+import 'providers/theme_provider.dart';
 import 'routes/app_router.dart';
 
 // NOTE: Firebase.initializeApp() will be added here once the Firebase
@@ -23,7 +24,7 @@ class QuickMarbleApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: router,
     );
   }

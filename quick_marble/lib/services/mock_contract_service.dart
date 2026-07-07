@@ -9,6 +9,7 @@ class MockContractService implements ContractService {
   int _lastSequence = 1;
   final List<Contract> _contracts = [
     Contract(
+      payments: const [],
       amountPaid: 0,
       documentName: '',
       notes: '',
@@ -41,6 +42,7 @@ class MockContractService implements ContractService {
     final now = DateTime.now();
     _lastSequence++;
     final contract = Contract(
+      payments: const [],
       id: 'contract-${now.microsecondsSinceEpoch}',
       number: 'QMC-${now.year}-${_lastSequence.toString().padLeft(6, '0')}',
       quotationId: quotation.id,

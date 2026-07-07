@@ -35,11 +35,18 @@ class ContractPdfService {
                   pw.Text(
                     'QUICK MARBLE & GRANITE',
                     style: const pw.TextStyle(
+                      color: PdfColors.green800,
                       fontSize: 22,
                       fontWeight: pw.FontWeight.bold,
                     ),
                   ),
-                  pw.Text('A Service On Your Time'),
+                  pw.Text(
+                    'A Service On Your Time',
+                    style: const pw.TextStyle(
+                      color: PdfColors.red800,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ],

@@ -6,6 +6,7 @@ import '../../core/themes/app_theme.dart';
 import '../../models/app_user.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dashboard_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../routes/app_router.dart';
 import '../shared/money_text.dart';
 
@@ -44,12 +45,22 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
     final stats = ref.watch(dashboardStatsProvider);
     final officeStats = ref.watch(officeDashboardStatsProvider);
     final selectedOffice =
-    officeStats.isEmpty ? null : officeStats[_selectedOfficeIndex];
+        officeStats.isEmpty ? null : officeStats[_selectedOfficeIndex];
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Quick Marble'),
         actions: [
+          IconButton(
+            tooltip: 'Toggle theme',
+            icon: Text(
+              ref.watch(themeModeProvider) == ThemeMode.dark ? '☀️' : '🌙',
+              style: const TextStyle(fontSize: 20),
+            ),
+            onPressed: () {
+              ref.read(themeModeProvider.notifier).toggleLightDark();
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sign out',
@@ -72,7 +83,9 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                       radius: 26,
                       backgroundColor: AppColors.green,
                       child: Text(
-                        widget.user.name.isNotEmpty ? widget.user.name[0].toUpperCase() : '?',
+                        widget.user.name.isNotEmpty
+                            ? widget.user.name[0].toUpperCase()
+                            : '?',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -120,9 +133,9 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                     child: FilterChip(
                       label: Text(office.officeName),
                       selected: index == _selectedOfficeIndex,
-onSelected: (_) {
-  setState(() => _selectedOfficeIndex = index);
-},
+                      onSelected: (_) {
+                        setState(() => _selectedOfficeIndex = index);
+                      },
                     ),
                   );
                 },
@@ -130,39 +143,39 @@ onSelected: (_) {
             ),
             const SizedBox(height: 20),
             if (selectedOffice != null) ...[
-  const SizedBox(height: 12),
-  Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            selectedOffice.officeName,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const Divider(),
-          _MoneyLine(
-            label: 'Quotation value',
-            amount: selectedOffice.stats.quotationValue,
-          ),
-          _MoneyLine(
-            label: 'Contract value',
-            amount: selectedOffice.stats.contractValue,
-          ),
-          _MoneyLine(
-            label: 'Paid',
-            amount: selectedOffice.stats.paidValue,
-          ),
-          _MoneyLine(
-            label: 'Outstanding',
-            amount: selectedOffice.stats.outstandingBalance,
-          ),
-        ],
-      ),
-    ),
-  ),
-],
+              const SizedBox(height: 12),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        selectedOffice.officeName,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const Divider(),
+                      _MoneyLine(
+                        label: 'Quotation value',
+                        amount: selectedOffice.stats.quotationValue,
+                      ),
+                      _MoneyLine(
+                        label: 'Contract value',
+                        amount: selectedOffice.stats.contractValue,
+                      ),
+                      _MoneyLine(
+                        label: 'Paid',
+                        amount: selectedOffice.stats.paidValue,
+                      ),
+                      _MoneyLine(
+                        label: 'Outstanding',
+                        amount: selectedOffice.stats.outstandingBalance,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),

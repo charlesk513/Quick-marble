@@ -15,6 +15,36 @@ extension ContractStatusX on ContractStatus {
   }
 }
 
+enum PaymentMethod { cash, mobileMoney, bankTransfer, cheque, other }
+
+extension PaymentMethodX on PaymentMethod {
+  String get label => switch (this) {
+        PaymentMethod.cash => 'Cash',
+        PaymentMethod.mobileMoney => 'Mobile Money',
+        PaymentMethod.bankTransfer => 'Bank Transfer',
+        PaymentMethod.cheque => 'Cheque',
+        PaymentMethod.other => 'Other',
+      };
+}
+
+class ContractPayment {
+  final String id;
+  final double amount;
+  final PaymentMethod method;
+  final String reference;
+  final String notes;
+  final DateTime paidAt;
+
+  const ContractPayment({
+    required this.id,
+    required this.amount,
+    required this.method,
+    required this.reference,
+    required this.notes,
+    required this.paidAt,
+  });
+}
+
 class Contract {
   final String id;
   final String number;
@@ -31,6 +61,7 @@ class Contract {
   final DateTime? completionDate;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final List<ContractPayment> payments;
 
   const Contract({
     required this.id,
@@ -38,6 +69,7 @@ class Contract {
     required this.quotationId,
     required this.quotationNumber,
     required this.officeId,
+    required this.payments,
     required this.clientName,
     required this.value,
     required this.amountPaid,
@@ -50,7 +82,10 @@ class Contract {
     required this.updatedAt,
   });
 
-  double get balance => value - amountPaid;
+  double get totalPaid =>
+      payments.fold(amountPaid, (sum, payment) => sum + payment.amount);
+
+  double get balance => value - totalPaid;
   bool get isPaidFully => balance <= 0;
 
   Contract copyWith({
@@ -60,6 +95,7 @@ class Contract {
     ContractStatus? status,
     DateTime? completionDate,
     DateTime? updatedAt,
+    List<ContractPayment>? payments,
   }) {
     return Contract(
       id: id,
@@ -77,6 +113,7 @@ class Contract {
       completionDate: completionDate ?? this.completionDate,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      payments: payments ?? this.payments,
     );
   }
 }
