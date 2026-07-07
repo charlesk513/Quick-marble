@@ -6,6 +6,7 @@ import '../../models/contract.dart';
 import '../../providers/contract_provider.dart';
 import '../../routes/app_router.dart';
 import '../../services/contract_pdf_service.dart';
+import '../../services/receipt_pdf_service.dart';
 import '../../widgets/empty_state.dart';
 import '../shared/money_text.dart';
 
@@ -261,6 +262,7 @@ class _ContractCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pdfService = ContractPdfService();
+    final receiptPdfService = ReceiptPdfService();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -299,6 +301,43 @@ class _ContractCard extends ConsumerWidget {
               const SizedBox(height: 6),
               Text(contract.notes),
             ],
+            if (contract.payments.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Payment History',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 6),
+              ...contract.payments.map(
+                (payment) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${payment.method.label}'
+                          '${payment.reference.isNotEmpty ? ' · ${payment.reference}' : ''}',
+                        ),
+                      ),
+                      MoneyText(
+                        payment.amount,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      IconButton(
+                        tooltip: 'Receipt PDF',
+                        icon: const Icon(Icons.receipt_long_outlined),
+                        onPressed: () async {
+                          await receiptPdfService.printReceipt(
+                            contract: contract,
+                            payment: payment,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -310,6 +349,11 @@ class _ContractCard extends ConsumerWidget {
                   },
                   icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
                   label: const Text('PDF'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _showPaymentDialog(context, ref, contract),
+                  icon: const Icon(Icons.payments_outlined, size: 18),
+                  label: const Text('Add Payment'),
                 ),
                 OutlinedButton(
                   onPressed: onEdit,
@@ -344,6 +388,109 @@ class _ContractCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+Future<void> _showPaymentDialog(
+  BuildContext context,
+  WidgetRef ref,
+  Contract contract,
+) async {
+  final formKey = GlobalKey<FormState>();
+  final amount = TextEditingController();
+  final reference = TextEditingController();
+  final notes = TextEditingController();
+  PaymentMethod method = PaymentMethod.cash;
+
+  await showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        title: Text('Add Payment - ${contract.number}'),
+        content: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Balance: ${formatUgx(contract.balance)}'),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: amount,
+                  decoration: const InputDecoration(
+                    labelText: 'Amount',
+                    prefixText: 'UGX ',
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    final parsed = double.tryParse(value?.trim() ?? '');
+                    if (parsed == null || parsed <= 0) return 'Invalid amount';
+                    if (parsed > contract.balance) {
+                      return 'Cannot exceed balance';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<PaymentMethod>(
+                  initialValue: method,
+                  decoration:
+                      const InputDecoration(labelText: 'Payment method'),
+                  items: PaymentMethod.values
+                      .map(
+                        (m) => DropdownMenuItem(
+                          value: m,
+                          child: Text(m.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setDialogState(() => method = value);
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: reference,
+                  decoration: const InputDecoration(
+                    labelText: 'Reference optional',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: notes,
+                  decoration: const InputDecoration(labelText: 'Notes'),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (!formKey.currentState!.validate()) return;
+
+              await ref.read(contractControllerProvider.notifier).addPayment(
+                    contractId: contract.id,
+                    amount: double.parse(amount.text.trim()),
+                    method: method,
+                    reference: reference.text.trim(),
+                    notes: notes.text.trim(),
+                    paidAt: DateTime.now(),
+                  );
+
+              if (context.mounted) Navigator.of(context).pop();
+            },
+            child: const Text('Save Payment'),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _ContractStatCard extends StatelessWidget {
