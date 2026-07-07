@@ -51,6 +51,33 @@ class ContractController extends StateNotifier<AsyncValue<void>> {
     }
   }
 
+  Future<void> addPayment({
+    required String contractId,
+    required double amount,
+    required PaymentMethod method,
+    required String reference,
+    required String notes,
+    required DateTime paidAt,
+  }) async {
+    state = const AsyncValue.loading();
+
+    try {
+      await _service.addPayment(
+        contractId: contractId,
+        amount: amount,
+        method: method,
+        reference: reference,
+        notes: notes,
+        paidAt: paidAt,
+      );
+
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
   Future<void> updateStatus(String id, ContractStatus status) async {
     state = const AsyncValue.loading();
     try {
