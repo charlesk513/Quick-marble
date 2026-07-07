@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../models/client.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/client_provider.dart';
 import '../../providers/office_provider.dart';
+import '../../routes/app_router.dart';
 import '../../widgets/empty_state.dart';
 
 enum _ClientStatusFilter { all, active, inactive }
@@ -51,6 +53,10 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(AppRoutes.dashboard),
+        ),
         title: const Text('Clients'),
       ),
       floatingActionButton: FloatingActionButton.extended(

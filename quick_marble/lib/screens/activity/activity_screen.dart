@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/activity_log.dart';
 import '../../providers/activity_log_provider.dart';
+import '../../routes/app_router.dart';
 import '../../widgets/empty_state.dart';
 
 class ActivityScreen extends ConsumerWidget {
@@ -13,7 +15,13 @@ class ActivityScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final logs = ref.watch(visibleActivityLogsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Activity & Notifications')),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(AppRoutes.dashboard),
+        ),
+        title: const Text('Activity & Notifications'),
+      ),
       body: logs.isEmpty
           ? const EmptyState(
               icon: Icons.notifications_active_outlined,

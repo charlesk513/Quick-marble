@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/themes/app_theme.dart';
 import '../../models/office.dart';
 import '../../providers/office_provider.dart';
+import '../../routes/app_router.dart';
 import '../../services/office_service.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/empty_state.dart';
@@ -16,7 +18,13 @@ class OfficesScreen extends ConsumerWidget {
     final officesAsync = ref.watch(officesStreamProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Offices')),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(AppRoutes.settings),
+        ),
+        title: const Text('Offices'),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showOfficeForm(context, ref),
         icon: const Icon(Icons.add_business_outlined),
