@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -13,24 +14,45 @@ class QuotationPdfService {
   }) async {
     final pdf = pw.Document();
 
+    final logoBytes = await rootBundle.load('assets/images/logo.jpg');
+    final logo = pw.MemoryImage(logoBytes.buffer.asUint8List());
     final subtotal = quotation.subtotal;
     final vat = vatEnabled ? subtotal * vatRate : 0.0;
     final total = subtotal + vat;
 
     pdf.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
+        pageTheme: pw.PageTheme(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          buildBackground: (context) => pw.Center(
+            child: pw.Opacity(
+              opacity: 0.08,
+              child: pw.Image(logo, width: 360),
+            ),
+          ),
+        ),
         build: (context) {
           return [
-            pw.Text(
-              'QUICK MARBLE & GRANITE',
-              style: const pw.TextStyle(
-                fontSize: 22,
-                fontWeight: pw.FontWeight.bold,
-              ),
+            pw.Row(
+              children: [
+                pw.Image(logo, width: 70, height: 70),
+                pw.SizedBox(width: 14),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'QUICK MARBLE & GRANITE',
+                      style: const pw.TextStyle(
+                        fontSize: 22,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.Text('A Service On Your Time'),
+                  ],
+                ),
+              ],
             ),
-            pw.Text('A Service On Your Time'),
             pw.SizedBox(height: 20),
             pw.Text(
               'QUOTATION',

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/contract.dart';
 import '../../providers/contract_provider.dart';
 import '../../routes/app_router.dart';
+import '../../services/contract_pdf_service.dart';
 import '../../widgets/empty_state.dart';
 import '../shared/money_text.dart';
 
@@ -259,6 +260,7 @@ class _ContractCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final pdfService = ContractPdfService();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -302,6 +304,13 @@ class _ContractCard extends ConsumerWidget {
               spacing: 8,
               runSpacing: 4,
               children: [
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    await pdfService.printContract(contract: contract);
+                  },
+                  icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                  label: const Text('PDF'),
+                ),
                 OutlinedButton(
                   onPressed: onEdit,
                   child: const Text('Update'),
