@@ -6,6 +6,7 @@ import '../../models/contract.dart';
 import '../../providers/contract_provider.dart';
 import '../../routes/app_router.dart';
 import '../../services/contract_pdf_service.dart';
+import '../../services/invoice_pdf_service.dart';
 import '../../services/receipt_pdf_service.dart';
 import '../../widgets/empty_state.dart';
 import '../shared/money_text.dart';
@@ -263,6 +264,7 @@ class _ContractCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pdfService = ContractPdfService();
     final receiptPdfService = ReceiptPdfService();
+    final invoicePdfService = InvoicePdfService();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -349,6 +351,13 @@ class _ContractCard extends ConsumerWidget {
                   },
                   icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
                   label: const Text('PDF'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    await invoicePdfService.printInvoice(contract: contract);
+                  },
+                  icon: const Icon(Icons.description_outlined, size: 18),
+                  label: const Text('Invoice'),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => _showPaymentDialog(context, ref, contract),

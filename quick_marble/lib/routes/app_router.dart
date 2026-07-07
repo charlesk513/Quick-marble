@@ -10,6 +10,8 @@ import '../screens/auth/login_screen.dart';
 import '../screens/clients/clients_screen.dart';
 import '../screens/contracts/contracts_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
+import '../screens/projects/project_details_screen.dart';
+import '../screens/projects/projects_screen.dart';
 import '../screens/quotations/quotations_screen.dart';
 import '../screens/reports/reports_screen.dart';
 import '../screens/settings/materials_screen.dart';
@@ -34,6 +36,8 @@ class AppRoutes {
   static const activity = '/activity';
   static const reports = '/reports';
   static const settingsMaterials = '/settings/materials';
+  static const projectDetails = '/project/:contractId';
+  static const projects = '/projects';
 }
 
 /// Bridges a Riverpod stream to something GoRouter's `refreshListenable`
@@ -86,8 +90,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const MaterialsScreen(),
       ),
       GoRoute(
+        path: AppRoutes.projectDetails,
+        builder: (context, state) {
+          final contractId = state.pathParameters['contractId']!;
+          return ProjectDetailsScreen(contractId: contractId);
+        },
+      ),
+      GoRoute(
         path: AppRoutes.splash,
         builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.projects,
+        builder: (context, state) => const ProjectsScreen(),
       ),
       GoRoute(
         path: AppRoutes.login,

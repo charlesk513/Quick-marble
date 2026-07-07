@@ -374,6 +374,11 @@ class _AppDrawer extends ConsumerWidget {
                 label: 'Dashboard',
                 route: AppRoutes.dashboard),
             const _DrawerTile(
+              icon: Icons.work_outline,
+              label: 'Projects',
+              route: AppRoutes.projects,
+            ),
+            const _DrawerTile(
                 icon: Icons.people_outline,
                 label: 'Clients',
                 route: AppRoutes.clients),

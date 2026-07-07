@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/contract.dart';
+import '../models/project_timeline.dart';
 import '../models/quotation.dart';
 import '../providers/auth_provider.dart';
+import '../providers/project_timeline_provider.dart';
 import '../services/contract_service.dart';
 import '../services/mock_contract_service.dart';
 
@@ -25,14 +27,24 @@ final visibleContractsProvider = Provider<List<Contract>>((ref) {
 });
 
 class ContractController extends StateNotifier<AsyncValue<void>> {
+  final Ref _ref;
   final ContractService _service;
 
-  ContractController(this._service) : super(const AsyncValue.data(null));
+  ContractController(this._ref, this._service)
+      : super(const AsyncValue.data(null));
 
   Future<void> createFromQuotation(Quotation quotation) async {
     state = const AsyncValue.loading();
     try {
-      await _service.createFromQuotation(quotation);
+      final contract = await _service.createFromQuotation(quotation);
+
+      await _ref.read(projectTimelineControllerProvider.notifier).addEvent(
+            contractId: contract.id,
+            type: ProjectTimelineType.contractCreated,
+            title: 'Contract Created',
+            description:
+                'Contract ${contract.number} created from ${quotation.number}.',
+          );
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -70,7 +82,13 @@ class ContractController extends StateNotifier<AsyncValue<void>> {
         notes: notes,
         paidAt: paidAt,
       );
-
+      await _ref.read(projectTimelineControllerProvider.notifier).addEvent(
+            contractId: contractId,
+            type: ProjectTimelineType.paymentReceived,
+            title: 'Payment Received',
+            description:
+                'Payment of UGX ${amount.toStringAsFixed(0)} received via ${method.label}.',
+          );
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -92,5 +110,5 @@ class ContractController extends StateNotifier<AsyncValue<void>> {
 
 final contractControllerProvider =
     StateNotifierProvider<ContractController, AsyncValue<void>>((ref) {
-  return ContractController(ref.watch(contractServiceProvider));
+  return ContractController(ref, ref.watch(contractServiceProvider));
 });
