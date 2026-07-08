@@ -29,9 +29,7 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
 
       final matchesSearch = searchable.contains(_query.toLowerCase());
 
-      final completed =
-          contract.status == ContractStatus.completed || contract.isPaidFully;
-
+      final completed = contract.status == ContractStatus.completed;
       final matchesTab = _showCompleted ? completed : !completed;
 
       return matchesSearch && matchesTab;
