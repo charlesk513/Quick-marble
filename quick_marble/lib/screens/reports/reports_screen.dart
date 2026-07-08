@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../routes/app_router.dart';
+import '../../services/business_report_pdf_service.dart';
 import '../shared/money_text.dart';
 
 class ReportsScreen extends ConsumerWidget {
@@ -15,6 +16,7 @@ class ReportsScreen extends ConsumerWidget {
     final stats = ref.watch(dashboardStatsProvider);
     final contracts = ref.watch(visibleContractsProvider);
 
+    final reportPdfService = BusinessReportPdfService();
     final activeProjects =
         contracts.where((contract) => !contract.isPaidFully).length;
 
@@ -81,20 +83,109 @@ class ReportsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Business report PDF export coming next.'),
-                ),
-              );
-            },
+            onPressed: () => _showReportOptions(
+              context,
+              reportPdfService: reportPdfService,
+              clients: stats.clients,
+              quotations: stats.quotations,
+              pendingQuotations: stats.pendingQuotations,
+              approvedQuotations: stats.approvedQuotations,
+              contracts: contracts,
+              quotationValue: stats.quotationValue,
+              contractValue: stats.contractValue,
+            ),
             icon: const Icon(Icons.picture_as_pdf_outlined),
-            label: const Text('Export Business Report PDF'),
+            label: const Text('Export Report PDF'),
           ),
         ],
       ),
     );
   }
+}
+
+Future<void> _showReportOptions(
+  BuildContext context, {
+  required BusinessReportPdfService reportPdfService,
+  required int clients,
+  required int quotations,
+  required int pendingQuotations,
+  required int approvedQuotations,
+  required List contracts,
+  required double quotationValue,
+  required double contractValue,
+}) async {
+  final now = DateTime.now();
+
+  Future<void> generate({
+    required String title,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    Navigator.of(context).pop();
+
+    await reportPdfService.printReport(
+      title: title,
+      clients: clients,
+      quotations: quotations,
+      pendingQuotations: pendingQuotations,
+      approvedQuotations: approvedQuotations,
+      contracts: contracts.cast(),
+      quotationValue: quotationValue,
+      contractValue: contractValue,
+      startDate: startDate,
+      endDate: endDate,
+    );
+  }
+
+  await showModalBottomSheet<void>(
+    context: context,
+    builder: (context) => SafeArea(
+      child: ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(
+            'Generate Report',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 12),
+          ListTile(
+            leading: const Icon(Icons.business_center_outlined),
+            title: const Text('Business Snapshot'),
+            subtitle: const Text('Current company position'),
+            onTap: () => generate(title: 'BUSINESS SNAPSHOT REPORT'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.today_outlined),
+            title: const Text('Today'),
+            onTap: () => generate(
+              title: 'DAILY BUSINESS REPORT',
+              startDate: DateTime(now.year, now.month, now.day),
+              endDate: DateTime(now.year, now.month, now.day),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.date_range_outlined),
+            title: const Text('This Month'),
+            onTap: () => generate(
+              title: 'MONTHLY BUSINESS REPORT',
+              startDate: DateTime(now.year, now.month, 1),
+              endDate: DateTime(now.year, now.month + 1, 0),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.calendar_month_outlined),
+            title: const Text('This Year'),
+            onTap: () => generate(
+              title: 'YEARLY BUSINESS REPORT',
+              startDate: DateTime(now.year, 1, 1),
+              endDate: DateTime(now.year, 12, 31),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _ReportRow extends StatelessWidget {

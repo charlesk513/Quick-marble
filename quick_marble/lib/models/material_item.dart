@@ -35,4 +35,28 @@ class MaterialItem {
       isActive: isActive ?? this.isActive,
     );
   }
+
+  factory MaterialItem.fromMap(String id, Map<String, dynamic> map) {
+    return MaterialItem(
+      id: id,
+      name: map['name'] as String? ?? '',
+      category: map['category'] as String? ?? '',
+      costPerUnit: (map['costPerUnit'] as num?)?.toDouble() ?? 0,
+      sellingPricePerUnit:
+          (map['sellingPricePerUnit'] as num?)?.toDouble() ?? 0,
+      unitLabel: map['unitLabel'] as String? ?? '',
+      isActive: map['isActive'] as bool? ?? true,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'category': category,
+      'costPerUnit': costPerUnit,
+      'sellingPricePerUnit': sellingPricePerUnit,
+      'unitLabel': unitLabel,
+      'isActive': isActive,
+    };
+  }
 }
