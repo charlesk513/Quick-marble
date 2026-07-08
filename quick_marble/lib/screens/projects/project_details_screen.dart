@@ -61,14 +61,14 @@ class ProjectDetailsScreen extends ConsumerWidget {
         children: [
           _ProjectSummary(contract: contract),
           const SizedBox(height: 16),
-          Text('Jobs / Installation Tasks',
-              style: Theme.of(context).textTheme.titleLarge),
+          Text('WORK SCHEDULE', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
           if (jobs.isEmpty)
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(16),
-                child: Text('No jobs scheduled for this project yet.'),
+                child: Text(
+                    'No work has been scheduled yet. \nTap "Schedule Job" below to plan the installation.'),
               ),
             )
           else
@@ -112,31 +112,57 @@ class _ProjectSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress =
-        contract.value <= 0 ? 0.0 : contract.totalPaid / contract.value;
-
     return Card(
+      elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(contract.number,
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 6),
-            Text(contract.clientName),
-            Text('Quotation: ${contract.quotationNumber}'),
-            Text('Status: ${contract.status.label}'),
-            const SizedBox(height: 14),
-            LinearProgressIndicator(value: progress.clamp(0.0, 1.0)),
-            const SizedBox(height: 10),
-            _MoneyLine(label: 'Contract value', amount: contract.value),
-            _MoneyLine(label: 'Paid', amount: contract.totalPaid),
-            _MoneyLine(label: 'Balance', amount: contract.balance, bold: true),
+            Text(
+              'PROJECT SUMMARY',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const Divider(height: 24),
+            _InfoRow('Client', contract.clientName),
+            _InfoRow('Contract', contract.number),
+            _InfoRow('Quotation', contract.quotationNumber),
+            _InfoRow('Status', contract.status.label),
+            const SizedBox(height: 20),
+            _MoneyLine(
+              label: 'Contract Value',
+              amount: contract.value,
+            ),
+            _MoneyLine(
+              label: 'Paid',
+              amount: contract.totalPaid,
+            ),
+            _MoneyLine(
+              label: 'Outstanding Balance',
+              amount: contract.balance,
+              bold: true,
+            ),
           ],
         ),
       ),
     );
+  }
+}
+
+Color _statusColor(JobStatus status) {
+  switch (status) {
+    case JobStatus.scheduled:
+      return Colors.blue;
+    case JobStatus.inProgress:
+      return Colors.orange;
+    case JobStatus.completed:
+      return Colors.green;
+    case JobStatus.cancelled:
+      return Colors.red;
+    case JobStatus.postponed:
+      return Colors.purple;
   }
 }
 
@@ -148,7 +174,12 @@ class _JobCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      elevation: 2,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -156,22 +187,48 @@ class _JobCard extends ConsumerWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.engineering_outlined),
+                const Icon(Icons.calendar_month_outlined, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     DateFormat.yMMMd().format(job.installationDate),
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
-                Chip(label: Text(job.status.label)),
+                Chip(
+                  backgroundColor:
+                      _statusColor(job.status).withValues(alpha: 0.15),
+                  side: BorderSide.none,
+                  label: Text(
+                    job.status.label,
+                    style: TextStyle(
+                      color: _statusColor(job.status),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ],
             ),
+            const SizedBox(height: 12),
+            _JobInfoLine(
+              icon: Icons.groups_outlined,
+              text: job.installer,
+            ),
             const SizedBox(height: 8),
-            Text('Team: ${job.installer}'),
-            Text('Location: ${job.location}'),
-            if (job.notes.isNotEmpty) Text('Notes: ${job.notes}'),
-            const SizedBox(height: 10),
+            _JobInfoLine(
+              icon: Icons.location_on_outlined,
+              text: job.location,
+            ),
+            if (job.notes.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              _JobInfoLine(
+                icon: Icons.sticky_note_2_outlined,
+                text: job.notes,
+              ),
+            ],
+            const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 6,
@@ -194,6 +251,28 @@ class _JobCard extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _JobInfoLine extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _JobInfoLine({
+    required this.icon,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18),
+        const SizedBox(width: 8),
+        Expanded(child: Text(text)),
+      ],
     );
   }
 }
@@ -379,6 +458,45 @@ Future<void> _showEditJobDialog(
       ),
     ),
   );
+}
+
+class _InfoRow extends StatelessWidget {
+  final String title;
+  final String value;
+
+  const _InfoRow(
+    this.title,
+    this.value,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _MoneyLine extends StatelessWidget {

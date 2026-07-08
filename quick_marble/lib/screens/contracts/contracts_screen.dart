@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/contract.dart';
+import '../../models/project_timeline.dart';
 import '../../providers/contract_provider.dart';
+import '../../providers/project_timeline_provider.dart';
 import '../../routes/app_router.dart';
 import '../../services/contract_pdf_service.dart';
 import '../../services/invoice_pdf_service.dart';
@@ -333,6 +335,16 @@ class _ContractCard extends ConsumerWidget {
                             contract: contract,
                             payment: payment,
                           );
+
+                          await ref
+                              .read(projectTimelineControllerProvider.notifier)
+                              .addEvent(
+                                contractId: contract.id,
+                                type: ProjectTimelineType.receiptGenerated,
+                                title: 'Receipt Generated',
+                                description:
+                                    'Receipt generated for payment of UGX ${payment.amount.toStringAsFixed(0)}.',
+                              );
                         },
                       ),
                     ],
@@ -348,6 +360,16 @@ class _ContractCard extends ConsumerWidget {
                 OutlinedButton.icon(
                   onPressed: () async {
                     await pdfService.printContract(contract: contract);
+
+                    await ref
+                        .read(projectTimelineControllerProvider.notifier)
+                        .addEvent(
+                          contractId: contract.id,
+                          type: ProjectTimelineType.contractCreated,
+                          title: 'Contract PDF Generated',
+                          description:
+                              'Contract PDF generated for ${contract.number}.',
+                        );
                   },
                   icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
                   label: const Text('PDF'),
@@ -355,6 +377,16 @@ class _ContractCard extends ConsumerWidget {
                 OutlinedButton.icon(
                   onPressed: () async {
                     await invoicePdfService.printInvoice(contract: contract);
+
+                    await ref
+                        .read(projectTimelineControllerProvider.notifier)
+                        .addEvent(
+                          contractId: contract.id,
+                          type: ProjectTimelineType.invoiceGenerated,
+                          title: 'Invoice Generated',
+                          description:
+                              'Invoice generated for ${contract.number}.',
+                        );
                   },
                   icon: const Icon(Icons.description_outlined, size: 18),
                   label: const Text('Invoice'),
