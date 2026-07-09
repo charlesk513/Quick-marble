@@ -1,14 +1,19 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/themes/app_theme.dart';
+import 'firebase_options.dart';
 import 'providers/theme_provider.dart';
 import 'routes/app_router.dart';
 
-// NOTE: Firebase.initializeApp() will be added here once the Firebase
-// project is created (Module: Firebase wiring). Until then, the app runs
-// fully against MockAuthService so the UI can be built and tested now.
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const ProviderScope(child: QuickMarbleApp()));
 }
 

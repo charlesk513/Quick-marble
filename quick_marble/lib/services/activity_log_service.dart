@@ -1,26 +1,26 @@
-import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/activity_log.dart';
 
 class ActivityLogService {
-  final _controller = StreamController<List<ActivityLog>>.broadcast();
+  final FirebaseFirestore _firestore;
 
-  final List<ActivityLog> _logs = [
-    ActivityLog(
-      id: 'activity-1',
-      officeId: 'nansana',
-      actorName: 'Owner Admin',
-      action: ActivityAction.approved,
-      entityType: 'Quotation',
-      entityLabel: 'QM-2026-000001',
-      message: 'Approved quotation for Mugisha Apartments.',
-      createdAt: DateTime(2026, 7, 5, 10, 30),
-    ),
-  ];
+  ActivityLogService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  CollectionReference<Map<String, dynamic>> get _collection =>
+      _firestore.collection('activity_logs');
 
   Stream<List<ActivityLog>> watchLogs() {
-    Future.microtask(_emit);
-    return _controller.stream;
+    return _collection
+        .orderBy('createdAt', descending: true)
+        .limit(100)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => ActivityLog.fromMap(doc.id, doc.data()))
+              .toList(),
+        );
   }
 
   Future<void> addLog({
@@ -31,21 +31,19 @@ class ActivityLogService {
     required String entityLabel,
     required String message,
   }) async {
-    _logs.insert(
-      0,
-      ActivityLog(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
-        officeId: officeId,
-        actorName: actorName,
-        action: action,
-        entityType: entityType,
-        entityLabel: entityLabel,
-        message: message,
-        createdAt: DateTime.now(),
-      ),
-    );
-    _emit();
-  }
+    final doc = _collection.doc();
 
-  void _emit() => _controller.add(List.unmodifiable(_logs));
+    final log = ActivityLog(
+      id: doc.id,
+      officeId: officeId,
+      actorName: actorName,
+      action: action,
+      entityType: entityType,
+      entityLabel: entityLabel,
+      message: message,
+      createdAt: DateTime.now(),
+    );
+
+    await doc.set(log.toMap());
+  }
 }

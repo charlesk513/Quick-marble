@@ -44,4 +44,33 @@ class ActivityLog {
     required this.message,
     required this.createdAt,
   });
+
+  factory ActivityLog.fromMap(String id, Map<String, dynamic> map) {
+    return ActivityLog(
+      id: id,
+      officeId: map['officeId'] as String? ?? '',
+      actorName: map['actorName'] as String? ?? '',
+      action: ActivityAction.values.firstWhere(
+        (action) => action.name == map['action'],
+        orElse: () => ActivityAction.updated,
+      ),
+      entityType: map['entityType'] as String? ?? '',
+      entityLabel: map['entityLabel'] as String? ?? '',
+      message: map['message'] as String? ?? '',
+      createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ??
+          DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'officeId': officeId,
+      'actorName': actorName,
+      'action': action.name,
+      'entityType': entityType,
+      'entityLabel': entityLabel,
+      'message': message,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
 }

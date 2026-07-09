@@ -71,4 +71,36 @@ class Job {
       status: status ?? this.status,
     );
   }
+
+  factory Job.fromMap(String id, Map<String, dynamic> map) {
+    return Job(
+      id: id,
+      contractId: map['contractId'] as String? ?? '',
+      contractNumber: map['contractNumber'] as String? ?? '',
+      clientName: map['clientName'] as String? ?? '',
+      installationDate:
+          DateTime.tryParse(map['installationDate']?.toString() ?? '') ??
+              DateTime.now(),
+      installer: map['installer'] as String? ?? '',
+      location: map['location'] as String? ?? '',
+      notes: map['notes'] as String? ?? '',
+      status: JobStatus.values.firstWhere(
+        (status) => status.name == map['status'],
+        orElse: () => JobStatus.scheduled,
+      ),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'contractId': contractId,
+      'contractNumber': contractNumber,
+      'clientName': clientName,
+      'installationDate': installationDate.toIso8601String(),
+      'installer': installer,
+      'location': location,
+      'notes': notes,
+      'status': status.name,
+    };
+  }
 }

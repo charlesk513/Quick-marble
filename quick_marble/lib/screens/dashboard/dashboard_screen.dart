@@ -74,6 +74,15 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: SearchBar(
+                leading: const Icon(Icons.search),
+                hintText: 'Search client, quotation, contract...',
+                elevation: const WidgetStatePropertyAll(1),
+                onTap: () => context.push(AppRoutes.search),
+              ),
+            ),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),

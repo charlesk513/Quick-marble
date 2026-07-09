@@ -281,4 +281,42 @@ class Quotation {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  factory Quotation.fromMap(String id, Map<String, dynamic> map) {
+    return Quotation(
+      id: id,
+      number: map['number'] as String? ?? '',
+      officeId: map['officeId'] as String? ?? '',
+      clientId: map['clientId'] as String? ?? '',
+      clientName: map['clientName'] as String? ?? '',
+      items: ((map['items'] as List?) ?? [])
+          .whereType<Map>()
+          .map((item) => QuotationItem.fromMap(
+                Map<String, dynamic>.from(item),
+              ))
+          .toList(),
+      status: QuotationStatusX.fromString(
+        map['status'] as String? ?? QuotationStatus.draft.name,
+      ),
+      notes: map['notes'] as String? ?? '',
+      createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ??
+          DateTime.now(),
+      updatedAt: DateTime.tryParse(map['updatedAt']?.toString() ?? '') ??
+          DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'number': number,
+      'officeId': officeId,
+      'clientId': clientId,
+      'clientName': clientName,
+      'items': items.map((item) => item.toMap()).toList(),
+      'status': status.name,
+      'notes': notes,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
 }
