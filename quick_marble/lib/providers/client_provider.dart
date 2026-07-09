@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/client.dart';
 import '../providers/auth_provider.dart';
 import '../services/client_service.dart';
-import '../services/mock_client_service.dart';
+import '../services/firebase_client_service.dart';
 
 final clientServiceProvider = Provider<ClientService>((ref) {
-  return MockClientService();
+  return FirebaseClientService();
 });
 
 final clientsStreamProvider = StreamProvider<List<Client>>((ref) {

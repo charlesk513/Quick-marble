@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/project_timeline.dart';
-import '../services/mock_project_timeline_service.dart';
+import '../services/firebase_project_timeline_service.dart';
 import '../services/project_timeline_service.dart';
 
 final projectTimelineServiceProvider = Provider<ProjectTimelineService>((ref) {
-  return MockProjectTimelineService();
+  return FirebaseProjectTimelineService();
 });
 
 final projectTimelineEventsProvider =

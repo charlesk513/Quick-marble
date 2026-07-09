@@ -355,15 +355,23 @@ class _UserFormSheetState extends ConsumerState<_UserFormSheet> {
               ),
               if (_role != UserRole.administrator) ...[
                 const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
+                DropdownButtonFormField<String?>(
                   initialValue:
                       offices.any((o) => o.id == _officeId) ? _officeId : null,
                   decoration:
                       const InputDecoration(labelText: 'Assigned Office'),
-                  items: offices
-                      .map((o) =>
-                          DropdownMenuItem(value: o.id, child: Text(o.name)))
-                      .toList(),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Select office'),
+                    ),
+                    ...offices.map(
+                      (o) => DropdownMenuItem<String?>(
+                        value: o.id,
+                        child: Text(o.name),
+                      ),
+                    ),
+                  ],
                   onChanged: (value) => setState(() => _officeId = value),
                   validator: (v) => v == null ? 'Select an office' : null,
                 ),

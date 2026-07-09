@@ -2,10 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/material_item.dart';
 import '../services/material_service.dart';
-import '../services/mock_material_service.dart';
+import '../services/firebase_material_service.dart';
 
 final materialServiceProvider = Provider<MaterialService>((ref) {
-  return MockMaterialService();
+  return FirebaseMaterialService();
 });
 
 final materialsStreamProvider = StreamProvider<List<MaterialItem>>((ref) {

@@ -5,10 +5,10 @@ import '../models/job.dart';
 import '../models/project_timeline.dart';
 import '../providers/project_timeline_provider.dart';
 import '../services/job_service.dart';
-import '../services/mock_job_service.dart';
+import '../services/firebase_job_service.dart';
 
 final jobServiceProvider = Provider<JobService>((ref) {
-  return MockJobService();
+  return FirebaseJobService();
 });
 
 final jobsStreamProvider = StreamProvider<List<Job>>((ref) {

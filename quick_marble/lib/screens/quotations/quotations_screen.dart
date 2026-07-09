@@ -72,12 +72,12 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Status'),
                   items: [
-                    const DropdownMenuItem(
+                    const DropdownMenuItem<QuotationStatus?>(
                       value: null,
                       child: Text('All statuses'),
                     ),
                     ...QuotationStatus.values.map(
-                      (status) => DropdownMenuItem(
+                      (status) => DropdownMenuItem<QuotationStatus?>(
                         value: status,
                         child: Text(status.label),
                       ),
@@ -210,18 +210,22 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                         },
                       ),
                     if (!creatingNewClient)
-                      DropdownButtonFormField<String>(
+                      DropdownButtonFormField<String?>(
                         initialValue: selectedClient?.id,
                         isExpanded: true,
                         decoration: const InputDecoration(labelText: 'Client'),
-                        items: clients
-                            .map(
-                              (item) => DropdownMenuItem(
-                                value: item.id,
-                                child: Text(item.name),
-                              ),
-                            )
-                            .toList(),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Select client'),
+                          ),
+                          ...clients.map(
+                            (item) => DropdownMenuItem<String?>(
+                              value: item.id,
+                              child: Text(item.name),
+                            ),
+                          ),
+                        ],
                         validator: (value) =>
                             value == null ? 'Select a client' : null,
                         onChanged: (value) {
@@ -234,19 +238,23 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                       )
                     else ...[
                       if (user?.isAdministrator == true)
-                        DropdownButtonFormField<String>(
+                        DropdownButtonFormField<String?>(
                           initialValue: newClientOfficeId,
                           isExpanded: true,
                           decoration:
                               const InputDecoration(labelText: 'Office'),
-                          items: offices
-                              .map(
-                                (office) => DropdownMenuItem(
-                                  value: office.id,
-                                  child: Text(office.name),
-                                ),
-                              )
-                              .toList(),
+                          items: [
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text('Select office'),
+                            ),
+                            ...offices.map(
+                              (office) => DropdownMenuItem<String?>(
+                                value: office.id,
+                                child: Text(office.name),
+                              ),
+                            ),
+                          ],
                           onChanged: (value) {
                             if (value == null) return;
                             setModalState(() => newClientOfficeId = value);
@@ -369,20 +377,24 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                               ),
                               const SizedBox(height: 12),
                               if (item.type == QuotationItemType.material) ...[
-                                DropdownButtonFormField<String>(
+                                DropdownButtonFormField<String?>(
                                   initialValue: item.materialId ??
                                       materials.firstOrNull?.id,
                                   isExpanded: true,
                                   decoration: const InputDecoration(
                                       labelText: 'Material'),
-                                  items: materials
-                                      .map(
-                                        (material) => DropdownMenuItem(
-                                          value: material.id,
-                                          child: Text(material.name),
-                                        ),
-                                      )
-                                      .toList(),
+                                  items: [
+                                    const DropdownMenuItem<String?>(
+                                      value: null,
+                                      child: Text('Select material'),
+                                    ),
+                                    ...materials.map(
+                                      (material) => DropdownMenuItem<String?>(
+                                        value: material.id,
+                                        child: Text(material.name),
+                                      ),
+                                    ),
+                                  ],
                                   validator: (_) => materials.isEmpty
                                       ? 'Add materials in Settings first'
                                       : null,
