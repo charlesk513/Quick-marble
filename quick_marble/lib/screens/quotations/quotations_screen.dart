@@ -210,56 +210,62 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                         },
                       ),
                     if (!creatingNewClient)
-                      DropdownButtonFormField<String?>(
-                        initialValue: selectedClient?.id,
-                        isExpanded: true,
-                        decoration: const InputDecoration(labelText: 'Client'),
-                        items: [
-                          const DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('Select client'),
-                          ),
-                          ...clients.map(
-                            (item) => DropdownMenuItem<String?>(
-                              value: item.id,
-                              child: Text(item.name),
-                            ),
-                          ),
-                        ],
-                        validator: (value) =>
-                            value == null ? 'Select a client' : null,
-                        onChanged: (value) {
-                          if (value == null) return;
-                          setModalState(() {
-                            selectedClient =
-                                clients.firstWhere((c) => c.id == value);
-                          });
-                        },
-                      )
+                      clients.isEmpty
+                          ? const Text(
+                              'No clients found. Create a new client first.')
+                          : DropdownButtonFormField<String>(
+                              initialValue:
+                                  clients.any((c) => c.id == selectedClient?.id)
+                                      ? selectedClient!.id
+                                      : clients.first.id,
+                              isExpanded: true,
+                              decoration:
+                                  const InputDecoration(labelText: 'Client'),
+                              items: clients
+                                  .map(
+                                    (item) => DropdownMenuItem<String>(
+                                      value: item.id,
+                                      child: Text(item.name),
+                                    ),
+                                  )
+                                  .toList(),
+                              validator: (value) =>
+                                  value == null ? 'Select a client' : null,
+                              onChanged: (value) {
+                                if (value == null) return;
+                                setModalState(() {
+                                  selectedClient =
+                                      clients.firstWhere((c) => c.id == value);
+                                });
+                              },
+                            )
                     else ...[
                       if (user?.isAdministrator == true)
-                        DropdownButtonFormField<String?>(
-                          initialValue: newClientOfficeId,
-                          isExpanded: true,
-                          decoration:
-                              const InputDecoration(labelText: 'Office'),
-                          items: [
-                            const DropdownMenuItem<String?>(
-                              value: null,
-                              child: Text('Select office'),
-                            ),
-                            ...offices.map(
-                              (office) => DropdownMenuItem<String?>(
-                                value: office.id,
-                                child: Text(office.name),
+                        offices.isEmpty
+                            ? const Text(
+                                'No active offices found. Add an office first.')
+                            : DropdownButtonFormField<String>(
+                                initialValue: offices
+                                        .any((o) => o.id == newClientOfficeId)
+                                    ? newClientOfficeId
+                                    : offices.first.id,
+                                isExpanded: true,
+                                decoration:
+                                    const InputDecoration(labelText: 'Office'),
+                                items: offices
+                                    .map(
+                                      (office) => DropdownMenuItem<String>(
+                                        value: office.id,
+                                        child: Text(office.name),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setModalState(
+                                      () => newClientOfficeId = value);
+                                },
                               ),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setModalState(() => newClientOfficeId = value);
-                          },
-                        ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: newClientName,
@@ -377,39 +383,39 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                               ),
                               const SizedBox(height: 12),
                               if (item.type == QuotationItemType.material) ...[
-                                DropdownButtonFormField<String?>(
-                                  initialValue: item.materialId ??
-                                      materials.firstOrNull?.id,
-                                  isExpanded: true,
-                                  decoration: const InputDecoration(
-                                      labelText: 'Material'),
-                                  items: [
-                                    const DropdownMenuItem<String?>(
-                                      value: null,
-                                      child: Text('Select material'),
-                                    ),
-                                    ...materials.map(
-                                      (material) => DropdownMenuItem<String?>(
-                                        value: material.id,
-                                        child: Text(material.name),
+                                materials.isEmpty
+                                    ? const Text(
+                                        'No materials found. Add materials in Settings first.')
+                                    : DropdownButtonFormField<String>(
+                                        initialValue: materials.any(
+                                                (m) => m.id == item.materialId)
+                                            ? item.materialId
+                                            : materials.first.id,
+                                        isExpanded: true,
+                                        decoration: const InputDecoration(
+                                            labelText: 'Material'),
+                                        items: materials
+                                            .map(
+                                              (material) =>
+                                                  DropdownMenuItem<String>(
+                                                value: material.id,
+                                                child: Text(material.name),
+                                              ),
+                                            )
+                                            .toList(),
+                                        onChanged: (value) {
+                                          if (value == null) return;
+
+                                          final material = materials
+                                              .firstWhere((m) => m.id == value);
+                                          setModalState(() {
+                                            item.materialId = material.id;
+                                            item.description.text =
+                                                material.name;
+                                            recalculateMaterialPrice();
+                                          });
+                                        },
                                       ),
-                                    ),
-                                  ],
-                                  validator: (_) => materials.isEmpty
-                                      ? 'Add materials in Settings first'
-                                      : null,
-                                  onChanged: (value) {
-                                    if (value == null) return;
-                                    setModalState(() {
-                                      item.materialId = value;
-                                      final material = materials
-                                          .firstWhere((m) => m.id == value);
-                                      item.description.text = material.name;
-                                      item.quantity.text = '1';
-                                      recalculateMaterialPrice();
-                                    });
-                                  },
-                                ),
                                 const SizedBox(height: 10),
                                 Row(
                                   children: [
