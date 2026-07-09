@@ -6,10 +6,10 @@ import '../models/quotation.dart';
 import '../providers/auth_provider.dart';
 import '../providers/project_timeline_provider.dart';
 import '../services/contract_service.dart';
-import '../services/mock_contract_service.dart';
+import '../services/firebase_contract_service.dart';
 
 final contractServiceProvider = Provider<ContractService>((ref) {
-  return MockContractService();
+  return FirebaseContractService();
 });
 
 final contractsStreamProvider = StreamProvider<List<Contract>>((ref) {

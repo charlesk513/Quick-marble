@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/office.dart';
 import '../services/office_service.dart';
-import '../services/mock_office_service.dart';
+import '../services/firebase_office_service.dart';
 
 /// Single place to swap MockOfficeService -> a Firestore-backed one later.
 final officeServiceProvider = Provider<OfficeService>((ref) {
-  return MockOfficeService();
+  return FirebaseOfficeService();
 });
 
 final officesStreamProvider = StreamProvider<List<Office>>((ref) {

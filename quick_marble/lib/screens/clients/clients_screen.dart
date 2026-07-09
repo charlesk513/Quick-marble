@@ -222,7 +222,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     final address = TextEditingController(text: client?.address ?? '');
     final notes = TextEditingController(text: client?.notes ?? '');
 
-    String officeId = client?.officeId ??
+    String? officeId = client?.officeId ??
         user?.assignedOfficeId ??
         (offices.isNotEmpty ? offices.first.id : 'nansana');
 
@@ -250,20 +250,26 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                   ),
                   const SizedBox(height: 16),
                   if (user?.isAdministrator == true)
-                    DropdownButtonFormField<String>(
+                    DropdownButtonFormField<String?>(
                       isExpanded: true,
                       initialValue: officeId,
                       decoration: const InputDecoration(labelText: 'Office'),
-                      items: offices
-                          .map(
-                            (office) => DropdownMenuItem<String>(
-                              value: office.id,
-                              child: Text(office.name),
-                            ),
-                          )
-                          .toList(),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Select office'),
+                        ),
+                        ...offices.map(
+                          (office) => DropdownMenuItem<String?>(
+                            value: office.id,
+                            child: Text(office.name),
+                          ),
+                        ),
+                      ],
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Select office'
+                          : null,
                       onChanged: (value) {
-                        if (value == null) return;
                         setModalState(() => officeId = value);
                       },
                     ),
@@ -318,7 +324,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
 
                         if (client == null) {
                           await controller.createClient(
-                            officeId: officeId,
+                            officeId: officeId!,
                             name: name.text.trim(),
                             phone: phone.text.trim(),
                             email: email.text.trim(),
@@ -328,7 +334,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                         } else {
                           await controller.updateClient(
                             client.copyWith(
-                              officeId: officeId,
+                              officeId: officeId!,
                               name: name.text.trim(),
                               phone: phone.text.trim(),
                               email: email.text.trim(),

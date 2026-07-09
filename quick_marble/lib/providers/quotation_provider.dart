@@ -4,11 +4,11 @@ import '../models/activity_log.dart';
 import '../models/quotation.dart';
 import '../providers/activity_log_provider.dart';
 import '../providers/auth_provider.dart';
-import '../services/mock_quotation_service.dart';
+import '../services/firebase_quotation_service.dart';
 import '../services/quotation_service.dart';
 
 final quotationServiceProvider = Provider<QuotationService>((ref) {
-  return MockQuotationService();
+  return FirebaseQuotationService();
 });
 
 final quotationsStreamProvider = StreamProvider<List<Quotation>>((ref) {

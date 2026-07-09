@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/app_user.dart';
 import '../services/user_service.dart';
-import '../services/mock_user_service.dart';
+import '../services/firebase_user_service.dart';
 
 /// Single place to swap MockUserService -> a Firestore-backed one later.
 final userServiceProvider = Provider<UserService>((ref) {
-  return MockUserService();
+  return FirebaseUserService();
 });
 
 final usersStreamProvider = StreamProvider<List<AppUser>>((ref) {
