@@ -14,6 +14,7 @@ import '../screens/projects/project_details_screen.dart';
 import '../screens/projects/projects_screen.dart';
 import '../screens/quotations/quotations_screen.dart';
 import '../screens/reports/reports_screen.dart';
+import '../screens/search/search_screen.dart';
 import '../screens/settings/materials_screen.dart';
 import '../screens/settings/offices_screen.dart';
 import '../screens/settings/settings_home_screen.dart';
@@ -38,6 +39,7 @@ class AppRoutes {
   static const settingsMaterials = '/settings/materials';
   static const projectDetails = '/project/:contractId';
   static const projects = '/projects';
+  static const search = '/search';
 }
 
 /// Bridges a Riverpod stream to something GoRouter's `refreshListenable`
@@ -103,6 +105,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.projects,
         builder: (context, state) => const ProjectsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.search,
+        builder: (context, state) => const SearchScreen(),
       ),
       GoRoute(
         path: AppRoutes.login,

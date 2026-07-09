@@ -1,12 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/app_user.dart';
 import '../services/auth_service.dart';
-import '../services/mock_auth_service.dart';
+import '../services/firebase_auth_service.dart';
 
 /// Single place to swap MockAuthService -> FirebaseAuthService once
 /// Firebase is configured. Nothing downstream needs to change.
 final authServiceProvider = Provider<AuthService>((ref) {
-  return MockAuthService();
+  return FirebaseAuthService();
 });
 
 /// Streams the currently signed-in user (or null), driving route guards
@@ -39,7 +40,8 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
 
   Future<void> signOut() => _service.signOut();
 
-  Future<void> resetPassword(String email) => _service.sendPasswordResetEmail(email);
+  Future<void> resetPassword(String email) =>
+      _service.sendPasswordResetEmail(email);
 }
 
 final authControllerProvider =

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "732648543361",
+    "project_id": "quick-marble-ac58f",
+    "storage_bucket": "quick-marble-ac58f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:732648543361:android:f88323422763cc0aca2980",
+        "android_client_info": {
+          "package_name": "com.example.quick_marble"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "732648543361-i53adav6gqkuhsm0drooevd8tn1v9vgv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3G9ZjssDY9vYxj5DjD-yKiXkcMF0DeHQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "732648543361-i53adav6gqkuhsm0drooevd8tn1v9vgv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -25,7 +25,8 @@ class OfficeController extends StateNotifier<AsyncValue<void>> {
   final OfficeService _service;
   OfficeController(this._service) : super(const AsyncValue.data(null));
 
-  Future<void> createOffice({required String name, required String location}) async {
+  Future<void> createOffice(
+      {required String name, required String location}) async {
     state = const AsyncValue.loading();
     try {
       await _service.createOffice(name: name, location: location);

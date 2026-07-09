@@ -43,6 +43,31 @@ class ContractPayment {
     required this.notes,
     required this.paidAt,
   });
+  factory ContractPayment.fromMap(Map<String, dynamic> map) {
+    return ContractPayment(
+      id: map['id'] as String? ?? '',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0,
+      method: PaymentMethod.values.firstWhere(
+        (method) => method.name == map['method'],
+        orElse: () => PaymentMethod.cash,
+      ),
+      reference: map['reference'] as String? ?? '',
+      notes: map['notes'] as String? ?? '',
+      paidAt:
+          DateTime.tryParse(map['paidAt']?.toString() ?? '') ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'amount': amount,
+      'method': method.name,
+      'reference': reference,
+      'notes': notes,
+      'paidAt': paidAt.toIso8601String(),
+    };
+  }
 }
 
 class Contract {
@@ -115,5 +140,59 @@ class Contract {
       updatedAt: updatedAt ?? this.updatedAt,
       payments: payments ?? this.payments,
     );
+  }
+
+  factory Contract.fromMap(String id, Map<String, dynamic> map) {
+    return Contract(
+      id: id,
+      number: map['number'] as String? ?? '',
+      quotationId: map['quotationId'] as String? ?? '',
+      quotationNumber: map['quotationNumber'] as String? ?? '',
+      officeId: map['officeId'] as String? ?? '',
+      clientName: map['clientName'] as String? ?? '',
+      value: (map['value'] as num?)?.toDouble() ?? 0,
+      amountPaid: (map['amountPaid'] as num?)?.toDouble() ?? 0,
+      documentName: map['documentName'] as String? ?? '',
+      notes: map['notes'] as String? ?? '',
+      status: ContractStatus.values.firstWhere(
+        (status) => status.name == map['status'],
+        orElse: () => ContractStatus.pending,
+      ),
+      startDate: DateTime.tryParse(map['startDate']?.toString() ?? '') ??
+          DateTime.now(),
+      completionDate: map['completionDate'] == null
+          ? null
+          : DateTime.tryParse(map['completionDate'].toString()),
+      createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ??
+          DateTime.now(),
+      updatedAt: DateTime.tryParse(map['updatedAt']?.toString() ?? '') ??
+          DateTime.now(),
+      payments: ((map['payments'] as List?) ?? [])
+          .whereType<Map>()
+          .map((payment) => ContractPayment.fromMap(
+                Map<String, dynamic>.from(payment),
+              ))
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'number': number,
+      'quotationId': quotationId,
+      'quotationNumber': quotationNumber,
+      'officeId': officeId,
+      'clientName': clientName,
+      'value': value,
+      'amountPaid': amountPaid,
+      'documentName': documentName,
+      'notes': notes,
+      'status': status.name,
+      'startDate': startDate.toIso8601String(),
+      'completionDate': completionDate?.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'payments': payments.map((payment) => payment.toMap()).toList(),
+    };
   }
 }
