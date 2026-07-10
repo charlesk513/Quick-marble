@@ -46,9 +46,16 @@ class QuotationPdfService {
                       style: const pw.TextStyle(
                         fontSize: 22,
                         fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.green800,
                       ),
                     ),
-                    pw.Text('A Service On Your Time'),
+                    pw.Text(
+                      'A Service On Your Time',
+                      style: const pw.TextStyle(
+                        color: PdfColors.red800,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ],

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-final _ugxFormat = NumberFormat.currency(locale: 'en_UG', symbol: 'UGX ', decimalDigits: 0);
+final _ugxFormat =
+    NumberFormat.currency(locale: 'en_UG', symbol: 'UGX ', decimalDigits: 0);
 
 class MoneyText extends StatelessWidget {
   final double amount;
