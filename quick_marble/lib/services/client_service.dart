@@ -1,7 +1,8 @@
 import '../models/client.dart';
 
 abstract class ClientService {
-  Stream<List<Client>> watchClients();
+  Stream<List<Client>> watchClients({String? officeId});
+
   Future<Client> createClient({
     required String officeId,
     required String name,
@@ -10,6 +11,8 @@ abstract class ClientService {
     required String address,
     required String notes,
   });
+
   Future<void> updateClient(Client client);
+
   Future<void> setClientActive(String clientId, bool isActive);
 }

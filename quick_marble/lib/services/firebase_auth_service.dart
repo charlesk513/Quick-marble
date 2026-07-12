@@ -12,13 +12,19 @@ class FirebaseAuthService implements AuthService {
 
   AppUser? _currentUser;
   final _controller = StreamController<AppUser?>.broadcast();
+  StreamSubscription<fb.User?>? _authSubscription;
 
   FirebaseAuthService({
     fb.FirebaseAuth? auth,
     FirebaseFirestore? firestore,
   })  : _auth = auth ?? fb.FirebaseAuth.instance,
         _firestore = firestore ?? FirebaseFirestore.instance {
-    _auth.authStateChanges().listen(_handleAuthState);
+    _authSubscription = _auth.authStateChanges().listen(
+      _handleAuthState,
+      onError: (Object error, StackTrace stackTrace) {
+        _controller.addError(error, stackTrace);
+      },
+    );
   }
 
   @override
@@ -37,25 +43,50 @@ class FirebaseAuthService implements AuthService {
       return;
     }
 
-    final user = await _loadUserProfile(firebaseUser.uid);
+    try {
+      final user = await _loadUserProfile(firebaseUser.uid);
 
-    if (!user.isActive) {
-      await _auth.signOut();
-      throw const AuthException('This account has been deactivated.');
+      if (!user.isActive) {
+        await _auth.signOut();
+        _currentUser = null;
+        _controller.add(null);
+        return;
+      }
+
+      _currentUser = user;
+      _controller.add(user);
+    } catch (error, stackTrace) {
+      _currentUser = null;
+      _controller.addError(error, stackTrace);
     }
-
-    _currentUser = user;
-    _controller.add(user);
   }
 
   Future<AppUser> _loadUserProfile(String uid) async {
-    final doc = await _firestore.collection('users').doc(uid).get();
+    final document = await _firestore.collection('users').doc(uid).get();
 
-    if (!doc.exists || doc.data() == null) {
+    if (!document.exists || document.data() == null) {
       throw const AuthException('User profile not found.');
     }
 
-    return AppUser.fromMap(doc.id, doc.data()!);
+    return AppUser.fromMap(document.id, document.data()!);
+  }
+
+  Future<void> _recordLogin(AppUser user) async {
+    try {
+      final document = _firestore.collection('activity_logs').doc();
+
+      await document.set({
+        'officeId': user.assignedOfficeId ?? '',
+        'actorName': user.name,
+        'action': 'login',
+        'entityType': 'User',
+        'entityLabel': user.name,
+        'message': '${user.name} signed in as ${user.role.label}.',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {
+      // Login must still succeed if activity logging temporarily fails.
+    }
   }
 
   @override
@@ -85,9 +116,11 @@ class FirebaseAuthService implements AuthService {
       _currentUser = user;
       _controller.add(user);
 
+      await _recordLogin(user);
+
       return user;
-    } on fb.FirebaseAuthException catch (e) {
-      throw AuthException(_friendlyMessage(e));
+    } on fb.FirebaseAuthException catch (error) {
+      throw AuthException(_friendlyMessage(error));
     }
   }
 
@@ -101,14 +134,16 @@ class FirebaseAuthService implements AuthService {
   @override
   Future<void> sendPasswordResetEmail(String email) async {
     try {
-      await _auth.sendPasswordResetEmail(email: email.trim());
-    } on fb.FirebaseAuthException catch (e) {
-      throw AuthException(_friendlyMessage(e));
+      await _auth.sendPasswordResetEmail(
+        email: email.trim(),
+      );
+    } on fb.FirebaseAuthException catch (error) {
+      throw AuthException(_friendlyMessage(error));
     }
   }
 
-  String _friendlyMessage(fb.FirebaseAuthException e) {
-    switch (e.code) {
+  String _friendlyMessage(fb.FirebaseAuthException error) {
+    switch (error.code) {
       case 'invalid-email':
         return 'Enter a valid email address.';
       case 'user-disabled':
@@ -117,10 +152,17 @@ class FirebaseAuthService implements AuthService {
       case 'wrong-password':
       case 'invalid-credential':
         return 'Incorrect email or password.';
+      case 'too-many-requests':
+        return 'Too many login attempts. Please try again later.';
       case 'network-request-failed':
         return 'Network error. Check your internet connection.';
       default:
-        return e.message ?? 'Authentication failed.';
+        return error.message ?? 'Authentication failed.';
     }
+  }
+
+  Future<void> dispose() async {
+    await _authSubscription?.cancel();
+    await _controller.close();
   }
 }

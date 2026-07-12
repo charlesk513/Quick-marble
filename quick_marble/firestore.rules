@@ -7,19 +7,51 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function hasUserProfile() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
     function userDoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return get(
+        /databases/$(database)/documents/users/$(request.auth.uid)
+      );
     }
 
     function isActiveUser() {
-      return signedIn()
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+      return hasUserProfile()
         && userDoc().data.isActive == true;
     }
 
     function isAdmin() {
       return isActiveUser()
         && userDoc().data.role == 'admin';
+    }
+
+    function userOfficeId() {
+      return userDoc().data.assignedOfficeId;
+    }
+
+    function canAccessOffice(officeId) {
+      return isAdmin()
+        || (
+          isActiveUser()
+          && officeId != null
+          && officeId == userOfficeId()
+        );
+    }
+
+    function canAccessExistingOfficeRecord() {
+      return canAccessOffice(resource.data.officeId);
+    }
+
+    function canCreateOfficeRecord() {
+      return canAccessOffice(request.resource.data.officeId);
+    }
+
+    function keepsOfficeScope() {
+      return isAdmin()
+        || request.resource.data.officeId == resource.data.officeId;
     }
 
     match /users/{userId} {
@@ -38,37 +70,76 @@ service cloud.firestore {
     }
 
     match /clients/{clientId} {
-      allow read, create, update: if isActiveUser();
+      allow read: if isActiveUser() && canAccessExistingOfficeRecord();
+      allow create: if isActiveUser() && canCreateOfficeRecord();
+      allow update: if isActiveUser()
+        && canAccessExistingOfficeRecord()
+        && canAccessOffice(request.resource.data.officeId)
+        && keepsOfficeScope();
       allow delete: if isAdmin();
     }
 
     match /quotations/{quotationId} {
-      allow read, create, update: if isActiveUser();
+      allow read: if isActiveUser() && canAccessExistingOfficeRecord();
+      allow create: if isActiveUser() && canCreateOfficeRecord();
+      allow update: if isActiveUser()
+        && canAccessExistingOfficeRecord()
+        && canAccessOffice(request.resource.data.officeId)
+        && keepsOfficeScope();
       allow delete: if isAdmin();
     }
 
     match /contracts/{contractId} {
-      allow read, create, update: if isActiveUser();
+      allow read: if isActiveUser() && canAccessExistingOfficeRecord();
+      allow create: if isActiveUser() && canCreateOfficeRecord();
+      allow update: if isActiveUser()
+        && canAccessExistingOfficeRecord()
+        && canAccessOffice(request.resource.data.officeId)
+        && keepsOfficeScope();
       allow delete: if isAdmin();
     }
 
     match /jobs/{jobId} {
-      allow read, create, update: if isActiveUser();
+      allow read: if isActiveUser() && canAccessExistingOfficeRecord();
+      allow create: if isActiveUser() && canCreateOfficeRecord();
+      allow update: if isActiveUser()
+        && canAccessExistingOfficeRecord()
+        && canAccessOffice(request.resource.data.officeId)
+        && keepsOfficeScope();
       allow delete: if isAdmin();
     }
 
     match /activity_logs/{logId} {
-      allow read, create: if isActiveUser();
+      allow read: if isActiveUser()
+        && (isAdmin() || resource.data.officeId == userOfficeId());
+
+      allow create: if isActiveUser()
+        && (isAdmin() || request.resource.data.officeId == userOfficeId());
+
       allow update, delete: if isAdmin();
     }
 
-    match /project_timeline_events/{eventId} {
-      allow read, create: if isActiveUser();
+    match /project_timelines/{eventId} {
+      allow read: if isActiveUser()
+        && (isAdmin() || resource.data.officeId == userOfficeId());
+
+      allow create: if isActiveUser()
+        && (isAdmin() || request.resource.data.officeId == userOfficeId());
+
       allow update, delete: if isAdmin();
     }
 
     match /counters/{counterId} {
       allow read, write: if isActiveUser();
+    }
+
+    match /settings/{settingId} {
+      allow read: if isActiveUser();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

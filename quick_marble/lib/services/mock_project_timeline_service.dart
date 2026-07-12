@@ -9,7 +9,7 @@ class MockProjectTimelineService implements ProjectTimelineService {
   final List<ProjectTimelineEvent> _events = [];
 
   @override
-  Stream<List<ProjectTimelineEvent>> watchEvents() {
+  Stream<List<ProjectTimelineEvent>> watchEvents({String? officeId}) {
     Future.microtask(_emit);
     return _controller.stream;
   }
@@ -26,6 +26,7 @@ class MockProjectTimelineService implements ProjectTimelineService {
       ProjectTimelineEvent(
         id: 'timeline-${DateTime.now().microsecondsSinceEpoch}',
         contractId: contractId,
+        officeId: '',
         type: type,
         title: title,
         description: description,

@@ -17,24 +17,49 @@ class FirebaseContractService implements ContractService {
       _firestore.collection('counters').doc('contracts');
 
   @override
-  Stream<List<Contract>> watchContracts() {
-    return _collection.orderBy('updatedAt', descending: true).snapshots().map(
+  Stream<List<Contract>> watchContracts({
+    String? officeId,
+  }) {
+    Query<Map<String, dynamic>> query = _collection;
+
+    if (officeId != null && officeId.trim().isNotEmpty) {
+      query = query.where(
+        'officeId',
+        isEqualTo: officeId.trim(),
+      );
+    }
+
+    query = query.orderBy(
+      'updatedAt',
+      descending: true,
+    );
+
+    return query.snapshots().map(
           (snapshot) => snapshot.docs
-              .map((doc) => Contract.fromMap(doc.id, doc.data()))
-              .toList(),
+              .map(
+                (document) => Contract.fromMap(
+                  document.id,
+                  document.data(),
+                ),
+              )
+              .toList(growable: false),
         );
   }
 
   @override
   Future<Contract> createFromQuotation(Quotation quotation) async {
     final existing = await _collection
+        .where('officeId', isEqualTo: quotation.officeId)
         .where('quotationId', isEqualTo: quotation.id)
         .limit(1)
         .get();
 
     if (existing.docs.isNotEmpty) {
-      final doc = existing.docs.first;
-      return Contract.fromMap(doc.id, doc.data());
+      final document = existing.docs.first;
+      return Contract.fromMap(
+        document.id,
+        document.data(),
+      );
     }
 
     final now = DateTime.now();
@@ -46,17 +71,20 @@ class FirebaseContractService implements ContractService {
 
       transaction.set(
         _counterDoc,
-        {'lastSequence': next},
+        {
+          'lastSequence': next,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
         SetOptions(merge: true),
       );
 
       return next;
     });
 
-    final doc = _collection.doc();
+    final document = _collection.doc();
 
     final contract = Contract(
-      id: doc.id,
+      id: document.id,
       number: 'QMC-${now.year}-${sequence.toString().padLeft(6, '0')}',
       quotationId: quotation.id,
       quotationNumber: quotation.number,
@@ -65,6 +93,8 @@ class FirebaseContractService implements ContractService {
       value: quotation.total,
       amountPaid: 0,
       documentName: '',
+      documentUrl: '',
+      documentStoragePath: '',
       notes: '',
       status: ContractStatus.pending,
       startDate: now,
@@ -74,26 +104,33 @@ class FirebaseContractService implements ContractService {
       payments: const [],
     );
 
-    await doc.set(contract.toMap());
-
+    await document.set(contract.toMap());
     return contract;
   }
 
   @override
   Future<void> updateContract(Contract contract) async {
-    await _collection.doc(contract.id).update(
-          contract.copyWith(updatedAt: DateTime.now()).toMap(),
+    final updated = contract.copyWith(
+      updatedAt: DateTime.now(),
+    );
+
+    await _collection.doc(contract.id).set(
+          updated.toMap(),
+          SetOptions(merge: true),
         );
   }
 
   @override
-  Future<void> updateStatus(String contractId, ContractStatus status) async {
+  Future<void> updateStatus(
+    String contractId,
+    ContractStatus status,
+  ) async {
     await _collection.doc(contractId).update({
       'status': status.name,
       'completionDate': status == ContractStatus.completed
-          ? DateTime.now().toIso8601String()
+          ? FieldValue.serverTimestamp()
           : null,
-      'updatedAt': DateTime.now().toIso8601String(),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
@@ -106,27 +143,53 @@ class FirebaseContractService implements ContractService {
     required String notes,
     required DateTime paidAt,
   }) async {
-    final doc = _collection.doc(contractId);
-    final snapshot = await doc.get();
+    if (amount <= 0) {
+      throw ArgumentError.value(
+        amount,
+        'amount',
+        'Must be greater than zero.',
+      );
+    }
 
-    if (!snapshot.exists || snapshot.data() == null) return;
+    final document = _collection.doc(contractId);
 
-    final contract = Contract.fromMap(snapshot.id, snapshot.data()!);
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(document);
 
-    final payment = ContractPayment(
-      id: 'payment-${DateTime.now().microsecondsSinceEpoch}',
-      amount: amount,
-      method: method,
-      reference: reference,
-      notes: notes,
-      paidAt: paidAt,
-    );
+      if (!snapshot.exists || snapshot.data() == null) {
+        throw StateError('Contract not found.');
+      }
 
-    final updated = contract.copyWith(
-      payments: [payment, ...contract.payments],
-      updatedAt: DateTime.now(),
-    );
+      final contract = Contract.fromMap(
+        snapshot.id,
+        snapshot.data()!,
+      );
 
-    await doc.update(updated.toMap());
+      if (amount > contract.balance) {
+        throw StateError(
+          'Payment cannot exceed the outstanding balance.',
+        );
+      }
+
+      final payment = ContractPayment(
+        id: 'payment-${DateTime.now().microsecondsSinceEpoch}',
+        amount: amount,
+        method: method,
+        reference: reference.trim(),
+        notes: notes.trim(),
+        paidAt: paidAt,
+      );
+
+      final updated = contract.copyWith(
+        payments: [payment, ...contract.payments],
+        updatedAt: DateTime.now(),
+      );
+
+      transaction.set(
+        document,
+        updated.toMap(),
+        SetOptions(merge: true),
+      );
+    });
   }
 }

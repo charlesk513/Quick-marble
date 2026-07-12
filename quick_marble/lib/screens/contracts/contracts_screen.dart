@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../models/activity_log.dart';
 import '../../models/contract.dart';
 import '../../models/project_timeline.dart';
+import '../../providers/activity_log_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/project_timeline_provider.dart';
 import '../../routes/app_router.dart';
 import '../../services/contract_pdf_service.dart';
+import '../../services/contract_storage_service.dart';
+import '../../services/delivery_note_pdf_service.dart';
 import '../../services/invoice_pdf_service.dart';
 import '../../services/receipt_pdf_service.dart';
 import '../../widgets/empty_state.dart';
@@ -110,12 +116,12 @@ class _ContractsScreenState extends ConsumerState<ContractsScreen> {
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Status'),
                   items: [
-                    const DropdownMenuItem(
+                    const DropdownMenuItem<ContractStatus?>(
                       value: null,
                       child: Text('All statuses'),
                     ),
                     ...ContractStatus.values.map(
-                      (status) => DropdownMenuItem(
+                      (status) => DropdownMenuItem<ContractStatus?>(
                         value: status,
                         child: Text(status.label),
                       ),
@@ -156,100 +162,314 @@ class _ContractsScreenState extends ConsumerState<ContractsScreen> {
     final formKey = GlobalKey<FormState>();
     final amountPaid =
         TextEditingController(text: contract.amountPaid.toStringAsFixed(0));
-    final documentName = TextEditingController(text: contract.documentName);
     final notes = TextEditingController(text: contract.notes);
+    final storageService = ContractStorageService();
+
+    String documentNameValue = contract.documentName;
+    String documentUrlValue = contract.documentUrl;
+    String documentStoragePathValue = contract.documentStoragePath;
+    final originalDocumentStoragePath = contract.documentStoragePath;
+
+    bool isUploading = false;
+    bool isSaving = false;
 
     await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        ),
-        child: Form(
-          key: formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Update ${contract.number}',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => StatefulBuilder(
+              builder: (context, setModalState) => Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                ),
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Update ${contract.number}',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(Icons.close),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: amountPaid,
+                          decoration: const InputDecoration(
+                            labelText: 'Amount paid',
+                            prefixText: 'UGX ',
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            final amount = double.tryParse(value?.trim() ?? '');
+                            if (amount == null || amount < 0) {
+                              return 'Invalid amount';
+                            }
+                            if (amount > contract.value) {
+                              return 'Cannot exceed contract value';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        if (documentNameValue.isNotEmpty)
+                          Card(
+                            child: ListTile(
+                              leading: const Icon(Icons.attach_file),
+                              title: Text(documentNameValue),
+                              subtitle:
+                                  const Text('Uploaded contract document'),
+                              trailing: documentUrlValue.isEmpty
+                                  ? const Icon(Icons.cloud_done_outlined)
+                                  : IconButton(
+                                      tooltip: 'Open document',
+                                      icon: const Icon(Icons.open_in_new),
+                                      onPressed: () async {
+                                        final uri =
+                                            Uri.tryParse(documentUrlValue);
+
+                                        if (uri == null) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Invalid document link.',
+                                              ),
+                                            ),
+                                          );
+                                          return;
+                                        }
+
+                                        final opened = await launchUrl(
+                                          uri,
+                                          mode: LaunchMode.externalApplication,
+                                        );
+
+                                        if (!opened && context.mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Could not open the document.',
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    ),
+                            ),
+                          )
+                        else
+                          const Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text('No contract document uploaded.'),
+                          ),
+                        const SizedBox(height: 10),
+                        if (documentNameValue.isNotEmpty)
+                          SizedBox(
+                            width: double.infinity,
+                            child: TextButton.icon(
+                              onPressed: isUploading || isSaving
+                                  ? null
+                                  : () {
+                                      setModalState(() {
+                                        documentNameValue = '';
+                                        documentUrlValue = '';
+                                        documentStoragePathValue = '';
+                                      });
+                                    },
+                              icon: const Icon(Icons.delete_outline),
+                              label: const Text(
+                                'Remove Document from Contract',
+                              ),
+                            ),
+                          ),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: isUploading
+                                ? null
+                                : () async {
+                                    setModalState(() => isUploading = true);
+
+                                    try {
+                                      final uploaded =
+                                          await storageService.pickAndUpload(
+                                        contractId: contract.id,
+                                      );
+
+                                      if (uploaded == null) return;
+
+                                      setModalState(() {
+                                        documentNameValue = uploaded.name;
+                                        documentUrlValue = uploaded.downloadUrl;
+                                        documentStoragePathValue =
+                                            uploaded.storagePath;
+                                      });
+
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                                'Document uploaded successfully.'),
+                                          ),
+                                        );
+                                      }
+                                    } catch (error) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content:
+                                                Text('Upload failed: $error'),
+                                          ),
+                                        );
+                                      }
+                                    } finally {
+                                      if (context.mounted) {
+                                        setModalState(
+                                            () => isUploading = false);
+                                      }
+                                    }
+                                  },
+                            icon: isUploading
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.cloud_upload_outlined),
+                            label: Text(
+                              isUploading
+                                  ? 'Uploading...'
+                                  : documentNameValue.isEmpty
+                                      ? 'Choose & Upload Document'
+                                      : 'Replace Document',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: notes,
+                          decoration: const InputDecoration(labelText: 'Notes'),
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            icon: isSaving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.save_outlined),
+                            label: Text(
+                              isSaving ? 'Saving...' : 'Save Contract Details',
+                            ),
+                            onPressed: isSaving || isUploading
+                                ? null
+                                : () async {
+                                    if (!formKey.currentState!.validate()) {
+                                      return;
+                                    }
+                                    setModalState(() => isSaving = true);
+
+                                    try {
+                                      final updated = contract.copyWith(
+                                        amountPaid: double.parse(
+                                            amountPaid.text.trim()),
+                                        documentName: documentNameValue,
+                                        documentUrl: documentUrlValue,
+                                        documentStoragePath:
+                                            documentStoragePathValue,
+                                        notes: notes.text.trim(),
+                                        updatedAt: DateTime.now(),
+                                      );
+
+                                      await ref
+                                          .read(contractControllerProvider
+                                              .notifier)
+                                          .updateContract(updated);
+
+                                      final oldDocumentMustBeDeleted =
+                                          originalDocumentStoragePath
+                                                  .isNotEmpty &&
+                                              originalDocumentStoragePath !=
+                                                  documentStoragePathValue;
+
+                                      if (oldDocumentMustBeDeleted) {
+                                        try {
+                                          await storageService.deleteByPath(
+                                            originalDocumentStoragePath,
+                                          );
+                                        } catch (error) {
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Contract saved, but the previous file could not be removed: $error',
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      }
+
+                                      if (context.mounted) {
+                                        Navigator.of(context).pop();
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Contract details saved successfully.',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } catch (error) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Could not save contract: $error',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } finally {
+                                      if (context.mounted) {
+                                        setModalState(() => isSaving = false);
+                                      }
+                                    }
+                                  },
+                          ),
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: amountPaid,
-                  decoration: const InputDecoration(
-                    labelText: 'Amount paid',
-                    prefixText: 'UGX ',
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    final amount = double.tryParse(value?.trim() ?? '');
-                    if (amount == null || amount < 0) return 'Invalid amount';
-                    if (amount > contract.value) {
-                      return 'Cannot exceed contract value';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: documentName,
-                  decoration: const InputDecoration(
-                    labelText: 'Document name / upload reference',
-                    hintText: 'e.g. signed_contract_001.pdf',
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: notes,
-                  decoration: const InputDecoration(labelText: 'Notes'),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    icon: const Icon(Icons.save_outlined),
-                    label: const Text('Save Contract Details'),
-                    onPressed: () async {
-                      if (!formKey.currentState!.validate()) return;
-
-                      final updated = contract.copyWith(
-                        amountPaid: double.parse(amountPaid.text.trim()),
-                        documentName: documentName.text.trim(),
-                        notes: notes.text.trim(),
-                        updatedAt: DateTime.now(),
-                      );
-
-                      await ref
-                          .read(contractControllerProvider.notifier)
-                          .updateContract(updated);
-
-                      if (context.mounted) Navigator.of(context).pop();
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+              ),
+            ));
   }
 }
 
@@ -267,6 +487,7 @@ class _ContractCard extends ConsumerWidget {
     final pdfService = ContractPdfService();
     final receiptPdfService = ReceiptPdfService();
     final invoicePdfService = InvoicePdfService();
+    final deliveryNotePdfService = DeliveryNotePdfService();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -291,15 +512,52 @@ class _ContractCard extends ConsumerWidget {
             Text('From ${contract.quotationNumber}'),
             const SizedBox(height: 8),
             _AmountRow(label: 'Contract value', value: contract.value),
-            _AmountRow(label: 'Paid', value: contract.amountPaid),
+            _AmountRow(label: 'Paid', value: contract.totalPaid),
             _AmountRow(
               label: 'Balance',
               value: contract.balance,
               bold: true,
             ),
             if (contract.documentName.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text('Document: ${contract.documentName}'),
+              const SizedBox(height: 8),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.attach_file),
+                  title: Text(contract.documentName),
+                  subtitle: const Text('Uploaded contract document'),
+                  trailing: contract.documentUrl.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Open document',
+                          icon: const Icon(Icons.open_in_new),
+                          onPressed: () async {
+                            final uri = Uri.tryParse(contract.documentUrl);
+
+                            if (uri == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Invalid document link.'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final opened = await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
+
+                            if (!opened && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Could not open the document.'),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                ),
+              ),
             ],
             if (contract.notes.isNotEmpty) ...[
               const SizedBox(height: 6),
@@ -335,6 +593,13 @@ class _ContractCard extends ConsumerWidget {
                             contract: contract,
                             payment: payment,
                           );
+                          await _addContractActivity(
+                            ref,
+                            contract: contract,
+                            action: ActivityAction.generated,
+                            message:
+                                'Payment receipt generated for ${contract.number}.',
+                          );
 
                           await ref
                               .read(projectTimelineControllerProvider.notifier)
@@ -360,6 +625,12 @@ class _ContractCard extends ConsumerWidget {
                 OutlinedButton.icon(
                   onPressed: () async {
                     await pdfService.printContract(contract: contract);
+                    await _addContractActivity(
+                      ref,
+                      contract: contract,
+                      action: ActivityAction.generated,
+                      message: 'Contract PDF generated for ${contract.number}.',
+                    );
 
                     await ref
                         .read(projectTimelineControllerProvider.notifier)
@@ -377,6 +648,12 @@ class _ContractCard extends ConsumerWidget {
                 OutlinedButton.icon(
                   onPressed: () async {
                     await invoicePdfService.printInvoice(contract: contract);
+                    await _addContractActivity(
+                      ref,
+                      contract: contract,
+                      action: ActivityAction.generated,
+                      message: 'Invoice generated for ${contract.number}.',
+                    );
 
                     await ref
                         .read(projectTimelineControllerProvider.notifier)
@@ -390,6 +667,32 @@ class _ContractCard extends ConsumerWidget {
                   },
                   icon: const Icon(Icons.description_outlined, size: 18),
                   label: const Text('Invoice'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    await deliveryNotePdfService.printDeliveryNote(
+                      contract: contract,
+                    );
+                    await _addContractActivity(
+                      ref,
+                      contract: contract,
+                      action: ActivityAction.generated,
+                      message:
+                          'Delivery note generated for ${contract.number}.',
+                    );
+
+                    await ref
+                        .read(projectTimelineControllerProvider.notifier)
+                        .addEvent(
+                          contractId: contract.id,
+                          type: ProjectTimelineType.deliveryNoteGenerated,
+                          title: 'Delivery Note Generated',
+                          description:
+                              'Delivery note generated for ${contract.number}.',
+                        );
+                  },
+                  icon: const Icon(Icons.local_shipping_outlined, size: 18),
+                  label: const Text('Delivery'),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => _showPaymentDialog(context, ref, contract),
@@ -428,6 +731,27 @@ class _ContractCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+Future<void> _addContractActivity(
+  WidgetRef ref, {
+  required Contract contract,
+  required ActivityAction action,
+  required String message,
+}) async {
+  final user = ref.read(currentUserProvider);
+  try {
+    await ref.read(activityLogServiceProvider).addLog(
+          officeId: contract.officeId,
+          actorName: user?.name ?? 'System',
+          action: action,
+          entityType: 'Contract',
+          entityLabel: contract.number,
+          message: message,
+        );
+  } catch (_) {
+    // Do not fail the main document action if audit logging fails.
   }
 }
 

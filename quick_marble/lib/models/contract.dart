@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum ContractStatus { pending, active, completed, cancelled }
 
 extension ContractStatusX on ContractStatus {
@@ -27,6 +29,14 @@ extension PaymentMethodX on PaymentMethod {
       };
 }
 
+DateTime _readDate(dynamic value, {DateTime? fallback}) {
+  if (value is Timestamp) return value.toDate();
+  if (value is DateTime) return value;
+  return DateTime.tryParse(value?.toString() ?? '') ??
+      fallback ??
+      DateTime.now();
+}
+
 class ContractPayment {
   final String id;
   final double amount;
@@ -43,6 +53,7 @@ class ContractPayment {
     required this.notes,
     required this.paidAt,
   });
+
   factory ContractPayment.fromMap(Map<String, dynamic> map) {
     return ContractPayment(
       id: map['id'] as String? ?? '',
@@ -53,8 +64,7 @@ class ContractPayment {
       ),
       reference: map['reference'] as String? ?? '',
       notes: map['notes'] as String? ?? '',
-      paidAt:
-          DateTime.tryParse(map['paidAt']?.toString() ?? '') ?? DateTime.now(),
+      paidAt: _readDate(map['paidAt']),
     );
   }
 
@@ -65,7 +75,7 @@ class ContractPayment {
       'method': method.name,
       'reference': reference,
       'notes': notes,
-      'paidAt': paidAt.toIso8601String(),
+      'paidAt': Timestamp.fromDate(paidAt),
     };
   }
 }
@@ -80,6 +90,8 @@ class Contract {
   final double value;
   final double amountPaid;
   final String documentName;
+  final String documentUrl;
+  final String documentStoragePath;
   final String notes;
   final ContractStatus status;
   final DateTime startDate;
@@ -99,6 +111,8 @@ class Contract {
     required this.value,
     required this.amountPaid,
     required this.documentName,
+    required this.documentUrl,
+    required this.documentStoragePath,
     required this.notes,
     required this.status,
     required this.startDate,
@@ -108,17 +122,25 @@ class Contract {
   });
 
   double get totalPaid =>
-      payments.fold(amountPaid, (sum, payment) => sum + payment.amount);
+      // ignore: avoid_types_as_parameter_names
+      payments.fold<double>(amountPaid, (sum, payment) => sum + payment.amount);
 
-  double get balance => value - totalPaid;
-  bool get isPaidFully => balance <= 0;
+  double get balance {
+    final remaining = value - totalPaid;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  bool get isPaidFully => totalPaid >= value;
 
   Contract copyWith({
     double? amountPaid,
     String? documentName,
+    String? documentUrl,
+    String? documentStoragePath,
     String? notes,
     ContractStatus? status,
     DateTime? completionDate,
+    bool clearCompletionDate = false,
     DateTime? updatedAt,
     List<ContractPayment>? payments,
   }) {
@@ -132,10 +154,13 @@ class Contract {
       value: value,
       amountPaid: amountPaid ?? this.amountPaid,
       documentName: documentName ?? this.documentName,
+      documentUrl: documentUrl ?? this.documentUrl,
+      documentStoragePath: documentStoragePath ?? this.documentStoragePath,
       notes: notes ?? this.notes,
       status: status ?? this.status,
       startDate: startDate,
-      completionDate: completionDate ?? this.completionDate,
+      completionDate:
+          clearCompletionDate ? null : completionDate ?? this.completionDate,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       payments: payments ?? this.payments,
@@ -143,6 +168,8 @@ class Contract {
   }
 
   factory Contract.fromMap(String id, Map<String, dynamic> map) {
+    final rawPayments = map['payments'];
+
     return Contract(
       id: id,
       number: map['number'] as String? ?? '',
@@ -153,26 +180,29 @@ class Contract {
       value: (map['value'] as num?)?.toDouble() ?? 0,
       amountPaid: (map['amountPaid'] as num?)?.toDouble() ?? 0,
       documentName: map['documentName'] as String? ?? '',
+      documentUrl: map['documentUrl'] as String? ?? '',
+      documentStoragePath: map['documentStoragePath'] as String? ?? '',
       notes: map['notes'] as String? ?? '',
       status: ContractStatus.values.firstWhere(
         (status) => status.name == map['status'],
         orElse: () => ContractStatus.pending,
       ),
-      startDate: DateTime.tryParse(map['startDate']?.toString() ?? '') ??
-          DateTime.now(),
+      startDate: _readDate(map['startDate']),
       completionDate: map['completionDate'] == null
           ? null
-          : DateTime.tryParse(map['completionDate'].toString()),
-      createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ??
-          DateTime.now(),
-      updatedAt: DateTime.tryParse(map['updatedAt']?.toString() ?? '') ??
-          DateTime.now(),
-      payments: ((map['payments'] as List?) ?? [])
-          .whereType<Map>()
-          .map((payment) => ContractPayment.fromMap(
-                Map<String, dynamic>.from(payment),
-              ))
-          .toList(),
+          : _readDate(map['completionDate']),
+      createdAt: _readDate(map['createdAt']),
+      updatedAt: _readDate(map['updatedAt']),
+      payments: rawPayments is List
+          ? rawPayments
+              .whereType<Map>()
+              .map(
+                (payment) => ContractPayment.fromMap(
+                  Map<String, dynamic>.from(payment),
+                ),
+              )
+              .toList()
+          : const [],
     );
   }
 
@@ -186,12 +216,15 @@ class Contract {
       'value': value,
       'amountPaid': amountPaid,
       'documentName': documentName,
+      'documentUrl': documentUrl,
+      'documentStoragePath': documentStoragePath,
       'notes': notes,
       'status': status.name,
-      'startDate': startDate.toIso8601String(),
-      'completionDate': completionDate?.toIso8601String(),
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'startDate': Timestamp.fromDate(startDate),
+      'completionDate':
+          completionDate == null ? null : Timestamp.fromDate(completionDate!),
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
       'payments': payments.map((payment) => payment.toMap()).toList(),
     };
   }

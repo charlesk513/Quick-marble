@@ -1,7 +1,8 @@
 import '../models/quotation.dart';
 
 abstract class QuotationService {
-  Stream<List<Quotation>> watchQuotations();
+  Stream<List<Quotation>> watchQuotations({String? officeId});
+
   Future<Quotation> createQuotation({
     required String officeId,
     required String clientId,
@@ -9,6 +10,8 @@ abstract class QuotationService {
     required List<QuotationItem> items,
     required String notes,
   });
+
   Future<void> updateQuotation(Quotation quotation);
+
   Future<void> updateStatus(String quotationId, QuotationStatus status);
 }

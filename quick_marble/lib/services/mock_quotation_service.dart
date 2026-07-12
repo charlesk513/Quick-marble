@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import '../models/quotation.dart';
 import 'quotation_service.dart';
 
@@ -14,8 +15,14 @@ class MockQuotationService implements QuotationService {
       clientId: 'client-1',
       clientName: 'Mugisha Apartments',
       items: const [
-        QuotationItem(description: 'Black galaxy granite countertop', quantity: 8, unitPrice: 280000),
-        QuotationItem(description: 'Transport and installation', quantity: 1, unitPrice: 350000),
+        QuotationItem(
+            description: 'Black galaxy granite countertop',
+            quantity: 8,
+            unitPrice: 280000),
+        QuotationItem(
+            description: 'Transport and installation',
+            quantity: 1,
+            unitPrice: 350000),
       ],
       status: QuotationStatus.approved,
       notes: 'Kitchen tops and sink opening.',
@@ -29,7 +36,10 @@ class MockQuotationService implements QuotationService {
       clientId: 'client-2',
       clientName: 'Kajjansi Homes Ltd',
       items: const [
-        QuotationItem(description: 'Reception counter marble finish', quantity: 1, unitPrice: 4500000),
+        QuotationItem(
+            description: 'Reception counter marble finish',
+            quantity: 1,
+            unitPrice: 4500000),
       ],
       status: QuotationStatus.pendingApproval,
       notes: 'Awaiting manager approval.',
@@ -39,9 +49,16 @@ class MockQuotationService implements QuotationService {
   ];
 
   @override
-  Stream<List<Quotation>> watchQuotations() {
-    Future.microtask(_emit);
-    return _controller.stream;
+  Stream<List<Quotation>> watchQuotations({String? officeId}) {
+    return _controller.stream.map((quotations) {
+      if (officeId == null || officeId.isEmpty) {
+        return quotations;
+      }
+
+      return quotations
+          .where((quotation) => quotation.officeId == officeId)
+          .toList();
+    });
   }
 
   @override
@@ -83,12 +100,14 @@ class MockQuotationService implements QuotationService {
   Future<void> updateStatus(String quotationId, QuotationStatus status) async {
     final index = _quotations.indexWhere((item) => item.id == quotationId);
     if (index == -1) return;
-    _quotations[index] = _quotations[index].copyWith(status: status, updatedAt: DateTime.now());
+    _quotations[index] =
+        _quotations[index].copyWith(status: status, updatedAt: DateTime.now());
     _emit();
   }
 
   void _emit() {
-    final copy = [..._quotations]..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    final copy = [..._quotations]
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     _controller.add(List.unmodifiable(copy));
   }
 }

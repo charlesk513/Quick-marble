@@ -14,6 +14,8 @@ class MockContractService implements ContractService {
       payments: const [],
       amountPaid: 0,
       documentName: '',
+      documentUrl: '',
+      documentStoragePath: '',
       notes: '',
       updatedAt: DateTime(2026, 7, 4),
       id: 'contract-1',
@@ -31,7 +33,7 @@ class MockContractService implements ContractService {
   ];
 
   @override
-  Stream<List<Contract>> watchContracts() {
+  Stream<List<Contract>> watchContracts({String? officeId}) {
     Future.microtask(_emit);
     return _controller.stream;
   }
@@ -58,6 +60,8 @@ class MockContractService implements ContractService {
       value: quotation.total,
       amountPaid: 0,
       documentName: '',
+      documentUrl: '',
+      documentStoragePath: '',
       notes: '',
       status: ContractStatus.pending,
       startDate: now,

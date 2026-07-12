@@ -6,18 +6,49 @@ import 'project_timeline_service.dart';
 class FirebaseProjectTimelineService implements ProjectTimelineService {
   final FirebaseFirestore _firestore;
 
-  FirebaseProjectTimelineService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  FirebaseProjectTimelineService({
+    FirebaseFirestore? firestore,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _collection =>
-      _firestore.collection('project_timeline_events');
+      _firestore.collection('project_timelines');
 
   @override
-  Stream<List<ProjectTimelineEvent>> watchEvents() {
-    return _collection.orderBy('createdAt', descending: true).snapshots().map(
+  Stream<List<ProjectTimelineEvent>> watchEvents({
+    String? officeId,
+  }) {
+    if (officeId != null && officeId.trim().isNotEmpty) {
+      return _collection
+          .where('officeId', isEqualTo: officeId.trim())
+          .snapshots()
+          .map((snapshot) {
+        final events = snapshot.docs
+            .map(
+              (document) => ProjectTimelineEvent.fromMap(
+                document.id,
+                document.data(),
+              ),
+            )
+            .toList(growable: false)
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+        return events;
+      });
+    }
+
+    return _collection
+        .orderBy('createdAt', descending: true)
+        .limit(300)
+        .snapshots()
+        .map(
           (snapshot) => snapshot.docs
-              .map((doc) => ProjectTimelineEvent.fromMap(doc.id, doc.data()))
-              .toList(),
+              .map(
+                (document) => ProjectTimelineEvent.fromMap(
+                  document.id,
+                  document.data(),
+                ),
+              )
+              .toList(growable: false),
         );
   }
 
@@ -28,17 +59,28 @@ class FirebaseProjectTimelineService implements ProjectTimelineService {
     required String title,
     required String description,
   }) async {
-    final doc = _collection.doc();
+    final contractDocument =
+        await _firestore.collection('contracts').doc(contractId).get();
 
-    final event = ProjectTimelineEvent(
-      id: doc.id,
-      contractId: contractId,
-      type: type,
-      title: title,
-      description: description,
-      createdAt: DateTime.now(),
-    );
+    if (!contractDocument.exists || contractDocument.data() == null) {
+      throw StateError('Contract not found for timeline event.');
+    }
 
-    await doc.set(event.toMap());
+    final officeId = contractDocument.data()!['officeId'] as String? ?? '';
+
+    if (officeId.trim().isEmpty) {
+      throw StateError('Contract office is missing.');
+    }
+
+    final document = _collection.doc();
+
+    await document.set({
+      'contractId': contractId.trim(),
+      'officeId': officeId.trim(),
+      'type': type.name,
+      'title': title.trim(),
+      'description': description.trim(),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 }

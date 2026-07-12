@@ -12,17 +12,21 @@ final quotationServiceProvider = Provider<QuotationService>((ref) {
 });
 
 final quotationsStreamProvider = StreamProvider<List<Quotation>>((ref) {
-  return ref.watch(quotationServiceProvider).watchQuotations();
+  final user = ref.watch(authStateProvider).valueOrNull;
+  if (user == null) return Stream.value(const <Quotation>[]);
+
+  final officeId = user.isAdministrator ? null : user.assignedOfficeId;
+  if (!user.isAdministrator && (officeId == null || officeId.trim().isEmpty)) {
+    return Stream.value(const <Quotation>[]);
+  }
+
+  return ref
+      .watch(quotationServiceProvider)
+      .watchQuotations(officeId: officeId);
 });
 
 final visibleQuotationsProvider = Provider<List<Quotation>>((ref) {
-  final user = ref.watch(currentUserProvider);
-  final quotations = ref.watch(quotationsStreamProvider).valueOrNull ?? [];
-
-  if (user == null) return [];
-  if (user.isAdministrator) return quotations;
-
-  return quotations.where((q) => q.officeId == user.assignedOfficeId).toList();
+  return ref.watch(quotationsStreamProvider).valueOrNull ?? const <Quotation>[];
 });
 
 class QuotationController extends StateNotifier<AsyncValue<void>> {
@@ -31,6 +35,15 @@ class QuotationController extends StateNotifier<AsyncValue<void>> {
 
   QuotationController(this._ref, this._service)
       : super(const AsyncValue.data(null));
+
+  Quotation? _findQuotation(String id) {
+    final quotations =
+        _ref.read(quotationsStreamProvider).valueOrNull ?? const <Quotation>[];
+    for (final quotation in quotations) {
+      if (quotation.id == id) return quotation;
+    }
+    return null;
+  }
 
   Future<void> createQuotation({
     required String officeId,
@@ -48,18 +61,17 @@ class QuotationController extends StateNotifier<AsyncValue<void>> {
         items: items,
         notes: notes,
       );
-
       await _addLog(
-        officeId: officeId,
+        officeId: quotation.officeId,
         action: ActivityAction.created,
         entityType: 'Quotation',
         entityLabel: quotation.number,
-        message: 'Created quotation for $clientName.',
+        message:
+            'Created quotation ${quotation.number} for ${quotation.clientName}.',
       );
-
       state = const AsyncValue.data(null);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
       rethrow;
     }
   }
@@ -68,18 +80,17 @@ class QuotationController extends StateNotifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
     try {
       await _service.updateQuotation(quotation);
-
       await _addLog(
         officeId: quotation.officeId,
         action: ActivityAction.updated,
         entityType: 'Quotation',
         entityLabel: quotation.number,
-        message: 'Updated quotation for ${quotation.clientName}.',
+        message:
+            'Updated quotation ${quotation.number} for ${quotation.clientName}.',
       );
-
       state = const AsyncValue.data(null);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
       rethrow;
     }
   }
@@ -87,10 +98,8 @@ class QuotationController extends StateNotifier<AsyncValue<void>> {
   Future<void> updateStatus(String id, QuotationStatus status) async {
     state = const AsyncValue.loading();
     try {
-      final quotations =
-          _ref.read(quotationsStreamProvider).valueOrNull ?? <Quotation>[];
-
-      final quotation = quotations.firstWhere((quote) => quote.id == id);
+      final quotation = _findQuotation(id);
+      if (quotation == null) throw StateError('Quotation not found.');
 
       await _service.updateStatus(id, status);
 
@@ -101,17 +110,27 @@ class QuotationController extends StateNotifier<AsyncValue<void>> {
         QuotationStatus.rejected => ActivityAction.rejected,
       };
 
+      final message = switch (status) {
+        QuotationStatus.draft =>
+          'Quotation ${quotation.number} returned to draft.',
+        QuotationStatus.pendingApproval =>
+          'Quotation ${quotation.number} submitted for approval.',
+        QuotationStatus.approved =>
+          'Quotation ${quotation.number} approved for ${quotation.clientName}.',
+        QuotationStatus.rejected =>
+          'Quotation ${quotation.number} rejected for ${quotation.clientName}.',
+      };
+
       await _addLog(
         officeId: quotation.officeId,
         action: action,
         entityType: 'Quotation',
         entityLabel: quotation.number,
-        message: '${action.label} quotation for ${quotation.clientName}.',
+        message: message,
       );
-
       state = const AsyncValue.data(null);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
       rethrow;
     }
   }
@@ -124,15 +143,18 @@ class QuotationController extends StateNotifier<AsyncValue<void>> {
     required String message,
   }) async {
     final user = _ref.read(currentUserProvider);
-
-    await _ref.read(activityLogServiceProvider).addLog(
-          officeId: officeId,
-          actorName: user?.name ?? 'System',
-          action: action,
-          entityType: entityType,
-          entityLabel: entityLabel,
-          message: message,
-        );
+    try {
+      await _ref.read(activityLogServiceProvider).addLog(
+            officeId: officeId,
+            actorName: user?.name ?? 'System',
+            action: action,
+            entityType: entityType,
+            entityLabel: entityLabel,
+            message: message,
+          );
+    } catch (_) {
+      // Logging must not make the main quotation action fail.
+    }
   }
 }
 

@@ -11,15 +11,20 @@ class ActivityLogService {
   CollectionReference<Map<String, dynamic>> get _collection =>
       _firestore.collection('activity_logs');
 
-  Stream<List<ActivityLog>> watchLogs() {
-    return _collection
-        .orderBy('createdAt', descending: true)
-        .limit(100)
-        .snapshots()
-        .map(
+  Stream<List<ActivityLog>> watchLogs({String? officeId}) {
+    Query<Map<String, dynamic>> query = _collection;
+
+    if (officeId != null && officeId.trim().isNotEmpty) {
+      query = query.where('officeId', isEqualTo: officeId.trim());
+    }
+
+    query = query.orderBy('createdAt', descending: true).limit(150);
+
+    return query.snapshots().map(
           (snapshot) => snapshot.docs
-              .map((doc) => ActivityLog.fromMap(doc.id, doc.data()))
-              .toList(),
+              .map((document) =>
+                  ActivityLog.fromMap(document.id, document.data()))
+              .toList(growable: false),
         );
   }
 
@@ -31,19 +36,16 @@ class ActivityLogService {
     required String entityLabel,
     required String message,
   }) async {
-    final doc = _collection.doc();
+    final document = _collection.doc();
 
-    final log = ActivityLog(
-      id: doc.id,
-      officeId: officeId,
-      actorName: actorName,
-      action: action,
-      entityType: entityType,
-      entityLabel: entityLabel,
-      message: message,
-      createdAt: DateTime.now(),
-    );
-
-    await doc.set(log.toMap());
+    await document.set({
+      'officeId': officeId.trim(),
+      'actorName': actorName.trim().isEmpty ? 'System' : actorName.trim(),
+      'action': action.name,
+      'entityType': entityType.trim().isEmpty ? 'Record' : entityType.trim(),
+      'entityLabel': entityLabel.trim(),
+      'message': message.trim(),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 }

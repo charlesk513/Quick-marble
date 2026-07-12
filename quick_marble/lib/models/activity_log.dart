@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum ActivityAction {
   created,
   updated,
@@ -8,6 +10,10 @@ enum ActivityAction {
   completed,
   payment,
   login,
+  uploaded,
+  generated,
+  scheduled,
+  activated,
 }
 
 extension ActivityActionX on ActivityAction {
@@ -21,7 +27,18 @@ extension ActivityActionX on ActivityAction {
         ActivityAction.completed => 'Completed',
         ActivityAction.payment => 'Payment',
         ActivityAction.login => 'Login',
+        ActivityAction.uploaded => 'Uploaded',
+        ActivityAction.generated => 'Generated',
+        ActivityAction.scheduled => 'Scheduled',
+        ActivityAction.activated => 'Activated',
       };
+}
+
+DateTime _readActivityDate(dynamic value) {
+  if (value is Timestamp) return value.toDate();
+  if (value is DateTime) return value;
+
+  return DateTime.tryParse(value?.toString() ?? '') ?? DateTime.now();
 }
 
 class ActivityLog {
@@ -49,16 +66,15 @@ class ActivityLog {
     return ActivityLog(
       id: id,
       officeId: map['officeId'] as String? ?? '',
-      actorName: map['actorName'] as String? ?? '',
+      actorName: map['actorName'] as String? ?? 'System',
       action: ActivityAction.values.firstWhere(
         (action) => action.name == map['action'],
         orElse: () => ActivityAction.updated,
       ),
-      entityType: map['entityType'] as String? ?? '',
+      entityType: map['entityType'] as String? ?? 'Record',
       entityLabel: map['entityLabel'] as String? ?? '',
       message: map['message'] as String? ?? '',
-      createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ??
-          DateTime.now(),
+      createdAt: _readActivityDate(map['createdAt']),
     );
   }
 
@@ -70,7 +86,7 @@ class ActivityLog {
       'entityType': entityType,
       'entityLabel': entityLabel,
       'message': message,
-      'createdAt': createdAt.toIso8601String(),
+      'createdAt': Timestamp.fromDate(createdAt),
     };
   }
 }

@@ -13,17 +13,25 @@ final contractServiceProvider = Provider<ContractService>((ref) {
 });
 
 final contractsStreamProvider = StreamProvider<List<Contract>>((ref) {
-  return ref.watch(contractServiceProvider).watchContracts();
+  final user = ref.watch(authStateProvider).valueOrNull;
+
+  if (user == null) {
+    return Stream.value(const <Contract>[]);
+  }
+
+  final officeId = user.isAdministrator ? null : user.assignedOfficeId;
+
+  if (!user.isAdministrator && (officeId == null || officeId.trim().isEmpty)) {
+    return Stream.value(const <Contract>[]);
+  }
+
+  return ref.watch(contractServiceProvider).watchContracts(
+        officeId: officeId,
+      );
 });
 
 final visibleContractsProvider = Provider<List<Contract>>((ref) {
-  final user = ref.watch(currentUserProvider);
-  final contracts = ref.watch(contractsStreamProvider).valueOrNull ?? [];
-
-  if (user == null) return [];
-  if (user.isAdministrator) return contracts;
-
-  return contracts.where((c) => c.officeId == user.assignedOfficeId).toList();
+  return ref.watch(contractsStreamProvider).valueOrNull ?? const <Contract>[];
 });
 
 class ContractController extends StateNotifier<AsyncValue<void>> {
@@ -35,6 +43,7 @@ class ContractController extends StateNotifier<AsyncValue<void>> {
 
   Future<void> createFromQuotation(Quotation quotation) async {
     state = const AsyncValue.loading();
+
     try {
       final contract = await _service.createFromQuotation(quotation);
 
@@ -45,20 +54,22 @@ class ContractController extends StateNotifier<AsyncValue<void>> {
             description:
                 'Contract ${contract.number} created from ${quotation.number}.',
           );
+
       state = const AsyncValue.data(null);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
       rethrow;
     }
   }
 
   Future<void> updateContract(Contract contract) async {
     state = const AsyncValue.loading();
+
     try {
       await _service.updateContract(contract);
       state = const AsyncValue.data(null);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
       rethrow;
     }
   }
@@ -82,6 +93,7 @@ class ContractController extends StateNotifier<AsyncValue<void>> {
         notes: notes,
         paidAt: paidAt,
       );
+
       await _ref.read(projectTimelineControllerProvider.notifier).addEvent(
             contractId: contractId,
             type: ProjectTimelineType.paymentReceived,
@@ -89,20 +101,25 @@ class ContractController extends StateNotifier<AsyncValue<void>> {
             description:
                 'Payment of UGX ${amount.toStringAsFixed(0)} received via ${method.label}.',
           );
+
       state = const AsyncValue.data(null);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
       rethrow;
     }
   }
 
-  Future<void> updateStatus(String id, ContractStatus status) async {
+  Future<void> updateStatus(
+    String id,
+    ContractStatus status,
+  ) async {
     state = const AsyncValue.loading();
+
     try {
       await _service.updateStatus(id, status);
       state = const AsyncValue.data(null);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
       rethrow;
     }
   }
@@ -110,5 +127,8 @@ class ContractController extends StateNotifier<AsyncValue<void>> {
 
 final contractControllerProvider =
     StateNotifierProvider<ContractController, AsyncValue<void>>((ref) {
-  return ContractController(ref, ref.watch(contractServiceProvider));
+  return ContractController(
+    ref,
+    ref.watch(contractServiceProvider),
+  );
 });
