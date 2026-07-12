@@ -13,11 +13,19 @@ class FirebaseClientService implements ClientService {
       _firestore.collection('clients');
 
   @override
-  Stream<List<Client>> watchClients() {
-    return _collection.orderBy('updatedAt', descending: true).snapshots().map(
+  Stream<List<Client>> watchClients({String? officeId}) {
+    Query<Map<String, dynamic>> query = _collection;
+
+    if (officeId != null && officeId.trim().isNotEmpty) {
+      query = query.where('officeId', isEqualTo: officeId.trim());
+    }
+
+    query = query.orderBy('updatedAt', descending: true);
+
+    return query.snapshots().map(
           (snapshot) => snapshot.docs
               .map((doc) => Client.fromMap(doc.id, doc.data()))
-              .toList(),
+              .toList(growable: false),
         );
   }
 
@@ -35,12 +43,12 @@ class FirebaseClientService implements ClientService {
 
     final client = Client(
       id: doc.id,
-      officeId: officeId,
-      name: name,
-      phone: phone,
-      email: email,
-      address: address,
-      notes: notes,
+      officeId: officeId.trim(),
+      name: name.trim(),
+      phone: phone.trim(),
+      email: email.trim(),
+      address: address.trim(),
+      notes: notes.trim(),
       isActive: true,
       createdAt: now,
       updatedAt: now,
@@ -52,8 +60,9 @@ class FirebaseClientService implements ClientService {
 
   @override
   Future<void> updateClient(Client client) async {
-    await _collection.doc(client.id).update(
+    await _collection.doc(client.id).set(
           client.copyWith(updatedAt: DateTime.now()).toMap(),
+          SetOptions(merge: true),
         );
   }
 

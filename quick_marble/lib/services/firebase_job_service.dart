@@ -14,11 +14,29 @@ class FirebaseJobService implements JobService {
       _firestore.collection('jobs');
 
   @override
-  Stream<List<Job>> watchJobs() {
-    return _collection.orderBy('installationDate').snapshots().map(
+  Stream<List<Job>> watchJobs({
+    String? officeId,
+  }) {
+    Query<Map<String, dynamic>> query = _collection;
+
+    if (officeId != null && officeId.trim().isNotEmpty) {
+      query = query.where(
+        'officeId',
+        isEqualTo: officeId.trim(),
+      );
+    }
+
+    query = query.orderBy('installationDate');
+
+    return query.snapshots().map(
           (snapshot) => snapshot.docs
-              .map((doc) => Job.fromMap(doc.id, doc.data()))
-              .toList(),
+              .map(
+                (document) => Job.fromMap(
+                  document.id,
+                  document.data(),
+                ),
+              )
+              .toList(growable: false),
         );
   }
 
@@ -30,33 +48,48 @@ class FirebaseJobService implements JobService {
     required String location,
     required String notes,
   }) async {
-    final doc = _collection.doc();
+    final document = _collection.doc();
+    final now = DateTime.now();
 
     final job = Job(
-      id: doc.id,
+      id: document.id,
       contractId: contract.id,
       contractNumber: contract.number,
+      officeId: contract.officeId,
       clientName: contract.clientName,
       installationDate: installationDate,
-      installer: installer,
-      location: location,
-      notes: notes,
+      installer: installer.trim(),
+      location: location.trim(),
+      notes: notes.trim(),
       status: JobStatus.scheduled,
+      createdAt: now,
+      updatedAt: now,
     );
 
-    await doc.set(job.toMap());
+    await document.set(job.toMap());
     return job;
   }
 
   @override
   Future<void> updateJob(Job job) async {
-    await _collection.doc(job.id).update(job.toMap());
+    final updated = job.copyWith(
+      updatedAt: DateTime.now(),
+    );
+
+    await _collection.doc(job.id).set(
+          updated.toMap(),
+          SetOptions(merge: true),
+        );
   }
 
   @override
-  Future<void> updateStatus(String jobId, JobStatus status) async {
+  Future<void> updateStatus(
+    String jobId,
+    JobStatus status,
+  ) async {
     await _collection.doc(jobId).update({
       'status': status.name,
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 }

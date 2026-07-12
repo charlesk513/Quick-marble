@@ -2,7 +2,9 @@ import '../models/contract.dart';
 import '../models/job.dart';
 
 abstract class JobService {
-  Stream<List<Job>> watchJobs();
+  Stream<List<Job>> watchJobs({
+    String? officeId,
+  });
 
   Future<Job> createJob({
     required Contract contract,
@@ -13,5 +15,9 @@ abstract class JobService {
   });
 
   Future<void> updateJob(Job job);
-  Future<void> updateStatus(String jobId, JobStatus status);
+
+  Future<void> updateStatus(
+    String jobId,
+    JobStatus status,
+  );
 }

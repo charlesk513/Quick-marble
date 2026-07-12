@@ -10,7 +10,7 @@ class MockJobService implements JobService {
   final List<Job> _jobs = [];
 
   @override
-  Stream<List<Job>> watchJobs() {
+  Stream<List<Job>> watchJobs({String? officeId}) {
     Future.microtask(_emit);
     return _controller.stream;
   }
@@ -26,6 +26,9 @@ class MockJobService implements JobService {
     final job = Job(
       id: 'job-${DateTime.now().microsecondsSinceEpoch}',
       contractId: contract.id,
+      officeId: contract.officeId,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
       contractNumber: contract.number,
       clientName: contract.clientName,
       installationDate: installationDate,

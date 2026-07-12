@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/activity_log.dart';
 import '../../models/client.dart';
 import '../../models/material_item.dart';
 import '../../models/quotation.dart';
+import '../../providers/activity_log_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/client_provider.dart';
 import '../../providers/company_settings_provider.dart';
@@ -885,6 +887,14 @@ class _QuotationCard extends ConsumerWidget {
                         vatEnabled: settings.vatEnabled,
                         vatRate: settings.vatRate,
                       );
+
+                      await _addQuotationActivity(
+                        ref,
+                        quotation: quotation,
+                        action: ActivityAction.generated,
+                        message:
+                            'Quotation PDF generated for ${quotation.number}.',
+                      );
                     },
                     icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
                     label: const Text('PDF'),
@@ -934,6 +944,15 @@ class _QuotationCard extends ConsumerWidget {
                         await ref
                             .read(contractControllerProvider.notifier)
                             .createFromQuotation(quotation);
+
+                        await _addQuotationActivity(
+                          ref,
+                          quotation: quotation,
+                          action: ActivityAction.created,
+                          message:
+                              'Contract creation started from approved quotation ${quotation.number}.',
+                        );
+
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -952,6 +971,28 @@ class _QuotationCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+Future<void> _addQuotationActivity(
+  WidgetRef ref, {
+  required Quotation quotation,
+  required ActivityAction action,
+  required String message,
+}) async {
+  final user = ref.read(currentUserProvider);
+
+  try {
+    await ref.read(activityLogServiceProvider).addLog(
+          officeId: quotation.officeId,
+          actorName: user?.name ?? 'System',
+          action: action,
+          entityType: 'Quotation',
+          entityLabel: quotation.number,
+          message: message,
+        );
+  } catch (_) {
+    // Do not fail the main quotation action if audit logging fails.
   }
 }
 

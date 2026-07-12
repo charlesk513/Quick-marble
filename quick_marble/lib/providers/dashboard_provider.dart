@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/client.dart';
 import '../models/contract.dart';
 import '../models/quotation.dart';
 import 'client_provider.dart';
@@ -48,11 +49,11 @@ class OfficeDashboardStats {
 }
 
 final dashboardStatsProvider = Provider<DashboardStats>((ref) {
-  final clients = ref.watch(visibleClientsProvider);
-  final quotations = ref.watch(visibleQuotationsProvider);
-  final contracts = ref.watch(visibleContractsProvider);
-
-  return _buildStats(clients, quotations, contracts);
+  return _buildStats(
+    clients: ref.watch(visibleClientsProvider),
+    quotations: ref.watch(visibleQuotationsProvider),
+    contracts: ref.watch(visibleContractsProvider),
+  );
 });
 
 final officeDashboardStatsProvider =
@@ -62,24 +63,29 @@ final officeDashboardStatsProvider =
   final quotations = ref.watch(visibleQuotationsProvider);
   final contracts = ref.watch(visibleContractsProvider);
 
-  return offices.map((office) {
+  final result = offices.map((office) {
     return OfficeDashboardStats(
       officeId: office.id,
       officeName: office.name,
       stats: _buildStats(
-        clients.where((client) => client.officeId == office.id).toList(),
-        quotations.where((quote) => quote.officeId == office.id).toList(),
-        contracts.where((contract) => contract.officeId == office.id).toList(),
+        clients: clients.where((c) => c.officeId == office.id).toList(),
+        quotations:
+            quotations.where((q) => q.officeId == office.id).toList(),
+        contracts:
+            contracts.where((c) => c.officeId == office.id).toList(),
       ),
     );
-  }).toList();
+  }).toList()
+    ..sort((a, b) => a.officeName.compareTo(b.officeName));
+
+  return result;
 });
 
-DashboardStats _buildStats(
-  List<dynamic> clients,
-  List<Quotation> quotations,
-  List<Contract> contracts,
-) {
+DashboardStats _buildStats({
+  required List<Client> clients,
+  required List<Quotation> quotations,
+  required List<Contract> contracts,
+}) {
   return DashboardStats(
     clients: clients.length,
     quotations: quotations.length,
@@ -93,9 +99,13 @@ DashboardStats _buildStats(
         contracts.where((c) => c.status == ContractStatus.active).length,
     completedContracts:
         contracts.where((c) => c.status == ContractStatus.completed).length,
-    quotationValue: quotations.fold<double>(0, (sum, q) => sum + q.total),
-    contractValue: contracts.fold<double>(0, (sum, c) => sum + c.value),
-    paidValue: contracts.fold<double>(0, (sum, c) => sum + c.amountPaid),
-    outstandingBalance: contracts.fold<double>(0, (sum, c) => sum + c.balance),
+    quotationValue:
+        quotations.fold<double>(0, (sum, q) => sum + q.total),
+    contractValue:
+        contracts.fold<double>(0, (sum, c) => sum + c.value),
+    paidValue:
+        contracts.fold<double>(0, (sum, c) => sum + c.totalPaid),
+    outstandingBalance:
+        contracts.fold<double>(0, (sum, c) => sum + c.balance),
   );
 }

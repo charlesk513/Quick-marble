@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "732648543361",
+    "firebase_url": "https://quick-marble-ac58f-default-rtdb.firebaseio.com",
     "project_id": "quick-marble-ac58f",
     "storage_bucket": "quick-marble-ac58f.firebasestorage.app"
   },
@@ -29,6 +30,49 @@
             {
               "client_id": "732648543361-i53adav6gqkuhsm0drooevd8tn1v9vgv.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "732648543361-nbtd8ebjo9u1b477anrck24shlidvi41.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.quickMarble"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:732648543361:android:c1812bd238228e45ca2980",
+        "android_client_info": {
+          "package_name": "com.quickmarble.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "732648543361-i53adav6gqkuhsm0drooevd8tn1v9vgv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3G9ZjssDY9vYxj5DjD-yKiXkcMF0DeHQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "732648543361-i53adav6gqkuhsm0drooevd8tn1v9vgv.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "732648543361-nbtd8ebjo9u1b477anrck24shlidvi41.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.quickMarble"
+              }
             }
           ]
         }

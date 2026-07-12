@@ -29,18 +29,15 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     final offices = ref.watch(activeOfficesProvider);
     final allClients = ref.watch(visibleClientsProvider);
 
-    final safeOfficeFilter = offices.any((office) => office.id == _officeFilter)
-        ? _officeFilter
-        : null;
-
     final clients = allClients.where((client) {
       final searchText =
           '${client.name} ${client.phone} ${client.email} ${client.address} ${client.notes}'
               .toLowerCase();
 
       final matchesSearch = searchText.contains(_query.toLowerCase());
+
       final matchesOffice =
-          safeOfficeFilter == null || client.officeId == safeOfficeFilter;
+          _officeFilter == null || client.officeId == _officeFilter;
 
       final matchesStatus = switch (_statusFilter) {
         _ClientStatusFilter.all => true,
@@ -110,15 +107,15 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                           labelText: 'Status',
                         ),
                         items: const [
-                          DropdownMenuItem<_ClientStatusFilter>(
+                          DropdownMenuItem(
                             value: _ClientStatusFilter.all,
                             child: Text('All clients'),
                           ),
-                          DropdownMenuItem<_ClientStatusFilter>(
+                          DropdownMenuItem(
                             value: _ClientStatusFilter.active,
                             child: Text('Active only'),
                           ),
-                          DropdownMenuItem<_ClientStatusFilter>(
+                          DropdownMenuItem(
                             value: _ClientStatusFilter.inactive,
                             child: Text('Inactive only'),
                           ),
@@ -134,7 +131,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                       Expanded(
                         child: DropdownButtonFormField<String?>(
                           isExpanded: true,
-                          initialValue: safeOfficeFilter,
+                          initialValue: _officeFilter,
                           decoration: const InputDecoration(
                             labelText: 'Office',
                           ),
@@ -225,7 +222,10 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     final address = TextEditingController(text: client?.address ?? '');
     final notes = TextEditingController(text: client?.notes ?? '');
 
-    String? officeId = client?.officeId ?? user?.assignedOfficeId;
+    String? officeId = client?.officeId ??
+        user?.assignedOfficeId ??
+        (offices.isNotEmpty ? offices.first.id : 'nansana');
+    // ignore: unnecessary_null_comparison
     if (officeId == null || !offices.any((office) => office.id == officeId)) {
       officeId = offices.isNotEmpty ? offices.first.id : null;
     }
@@ -259,11 +259,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                             'No active offices found. Add an office first.')
                         : DropdownButtonFormField<String>(
                             isExpanded: true,
-                            initialValue: offices.any(
-                              (office) => office.id == officeId,
-                            )
-                                ? officeId
-                                : offices.first.id,
+                            initialValue: officeId ?? offices.first.id,
                             decoration:
                                 const InputDecoration(labelText: 'Office'),
                             items: offices
@@ -325,23 +321,12 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                       onPressed: () async {
                         if (!formKey.currentState!.validate()) return;
 
-                        final selectedOfficeId = officeId;
-                        if (selectedOfficeId == null ||
-                            selectedOfficeId.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Add/select an office first.'),
-                            ),
-                          );
-                          return;
-                        }
-
                         final controller =
                             ref.read(clientControllerProvider.notifier);
 
                         if (client == null) {
                           await controller.createClient(
-                            officeId: selectedOfficeId,
+                            officeId: officeId!,
                             name: name.text.trim(),
                             phone: phone.text.trim(),
                             email: email.text.trim(),
@@ -351,7 +336,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                         } else {
                           await controller.updateClient(
                             client.copyWith(
-                              officeId: selectedOfficeId,
+                              officeId: officeId!,
                               name: name.text.trim(),
                               phone: phone.text.trim(),
                               email: email.text.trim(),
@@ -373,6 +358,12 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
         ),
       ),
     );
+
+    // name.dispose();
+    // phone.dispose();
+    // email.dispose();
+    // address.dispose();
+    // notes.dispose();
   }
 
   String? _required(String? value) {

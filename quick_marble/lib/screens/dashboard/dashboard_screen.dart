@@ -44,6 +44,11 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
   Widget build(BuildContext context) {
     final stats = ref.watch(dashboardStatsProvider);
     final officeStats = ref.watch(officeDashboardStatsProvider);
+
+    if (_selectedOfficeIndex >= officeStats.length) {
+      _selectedOfficeIndex = 0;
+    }
+
     final selectedOffice =
         officeStats.isEmpty ? null : officeStats[_selectedOfficeIndex];
 
@@ -53,9 +58,10 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
         actions: [
           IconButton(
             tooltip: 'Toggle theme',
-            icon: Text(
-              ref.watch(themeModeProvider) == ThemeMode.dark ? '☀️' : '🌙',
-              style: const TextStyle(fontSize: 20),
+            icon: Icon(
+              ref.watch(themeModeProvider) == ThemeMode.dark
+                  ? Icons.light_mode_outlined
+                  : Icons.dark_mode_outlined,
             ),
             onPressed: () {
               ref.read(themeModeProvider.notifier).toggleLightDark();
@@ -172,6 +178,23 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                         label: 'Contract value',
                         amount: selectedOffice.stats.contractValue,
                       ),
+                      _CountLine(
+                        label: 'Clients',
+                        value: selectedOffice.stats.clients,
+                      ),
+                      _CountLine(
+                        label: 'Contracts',
+                        value: selectedOffice.stats.contracts,
+                      ),
+                      _CountLine(
+                        label: 'Active projects',
+                        value: selectedOffice.stats.activeContracts,
+                      ),
+                      _CountLine(
+                        label: 'Completed projects',
+                        value: selectedOffice.stats.completedContracts,
+                      ),
+                      const Divider(),
                       _MoneyLine(
                         label: 'Paid',
                         amount: selectedOffice.stats.paidValue,
@@ -185,6 +208,11 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                 ),
               ),
             ],
+            Text(
+              'Business Overview',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -209,9 +237,24 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                   icon: Icons.pending_actions_outlined,
                 ),
                 _StatCard(
+                  title: 'Approved',
+                  value: stats.approvedQuotations.toString(),
+                  icon: Icons.check_circle_outline,
+                ),
+                _StatCard(
                   title: 'Contracts',
                   value: stats.contracts.toString(),
                   icon: Icons.assignment_turned_in_outlined,
+                ),
+                _StatCard(
+                  title: 'Active Projects',
+                  value: stats.activeContracts.toString(),
+                  icon: Icons.work_outline,
+                ),
+                _StatCard(
+                  title: 'Completed',
+                  value: stats.completedContracts.toString(),
+                  icon: Icons.verified_outlined,
                 ),
               ],
             ),
@@ -236,7 +279,7 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                       amount: stats.contractValue,
                     ),
                     _MoneyLine(
-                      label: 'Paid',
+                      label: 'Total paid',
                       amount: stats.paidValue,
                     ),
                     _MoneyLine(
@@ -266,6 +309,11 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                   label: 'Contracts',
                   icon: Icons.assignment_turned_in_outlined,
                   route: AppRoutes.contracts,
+                ),
+                _QuickAction(
+                  label: 'Projects',
+                  icon: Icons.work_outline,
+                  route: AppRoutes.projects,
                 ),
                 _QuickAction(
                   label: 'Reports',
@@ -321,6 +369,33 @@ class _MoneyLine extends StatelessWidget {
         children: [
           Text(label),
           MoneyText(amount, style: const TextStyle(fontWeight: FontWeight.bold))
+        ],
+      ),
+    );
+  }
+}
+
+class _CountLine extends StatelessWidget {
+  final String label;
+  final int value;
+
+  const _CountLine({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(child: Text(label)),
+          Text(
+            value.toString(),
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );

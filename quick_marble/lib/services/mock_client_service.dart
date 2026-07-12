@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import '../models/client.dart';
 import 'client_service.dart';
 
@@ -32,9 +33,14 @@ class MockClientService implements ClientService {
   ];
 
   @override
-  Stream<List<Client>> watchClients() {
-    Future.microtask(_emit);
-    return _controller.stream;
+  Stream<List<Client>> watchClients({String? officeId}) {
+    return _controller.stream.map((clients) {
+      if (officeId == null || officeId.isEmpty) {
+        return clients;
+      }
+
+      return clients.where((client) => client.officeId == officeId).toList();
+    });
   }
 
   @override
@@ -84,7 +90,8 @@ class MockClientService implements ClientService {
   }
 
   void _emit() {
-    final copy = [..._clients]..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    final copy = [..._clients]
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     _controller.add(List.unmodifiable(copy));
   }
 }
